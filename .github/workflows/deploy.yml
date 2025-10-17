@@ -36,6 +36,7 @@ jobs:
           script: |
             cd /var/www/basturms
             git pull origin main
+            rm composer.lock
             composer install
             composer install --no-dev --optimize-autoloader            
             sudo systemctl restart apache2
