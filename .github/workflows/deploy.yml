@@ -11,6 +11,7 @@ jobs:
       EC2_HOST: ${{ secrets.EC2_HOST }}
       EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
       EC2_USER: ${{ secrets.EC2_USER }}
+      EC2_DEPLOY_PASSPHRASE: ${{ secrets.EC2_DEPLOY_PASSPHRASE }}
 
     steps:
       - name: Checkout code
@@ -31,6 +32,7 @@ jobs:
           host: ${{ env.EC2_HOST }}
           username: ubuntu
           key: ${{ env.EC2_SSH_KEY }}
+          passphrase: ${{ env.EC2_DEPLOY_PASSPHRASE }}
           script: |
             cd /var/www/basturms
             git pull origin main
