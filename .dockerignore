@@ -1,0 +1,103 @@
+# Version control
+.git/
+.gitignore
+.svn/
+.hg/
+
+# IDE/editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Build outputs and development artifacts
+dist/
+build/
+out/
+debug/
+*.log
+
+# Test files and directories
+test/
+tests/
+*.test
+*.spec.js
+*.spec.php
+
+# Temporary and cache files
+tmp/
+temp/
+*.tmp
+
+# Environment and secrets
+.env
+.env.*
+.sample.env
+*.env
+*.pem
+*.key
+*.crt
+
+# Local configuration
+.local/
+local/
+config.local.*
+*.local.yml
+
+# Documentation and markdown
+README*
+*.md
+docs/
+
+# Docker files (not needed in build context)
+.dockerignore
+Dockerfile*
+docker-compose*
+
+# Node.js (if present)
+node_modules/
+npm-debug.log
+yarn-debug.log
+
+# Python (if present)
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.coverage
+
+# Go (if present)
+*.test
+.go-cache/
+
+# Java (if present)
+target/
+*.class
+.gradle/
+
+# PHP Composer vendor (if not needed in build context)
+vendor/
+
+# Miscellaneous
+*.bak
+*.old
+
+# Storage (exclude everything except what you need)
+storage/cache_test/
+storage/jobs/
+storage/jobs_test/
+storage/logs/
+storage/reports/
+
+# Bin and other local scripts
+bin/
+
+# Exclude any other hidden files
+.*
+
+# Exclude any files not needed for production
+*.ini
+*.conf
+*.scss
+
+# End of .dockerignore
