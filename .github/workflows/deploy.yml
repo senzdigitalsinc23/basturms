@@ -36,9 +36,8 @@ jobs:
           script: |
             cd /var/www/basturms
             git pull origin main
-            rm composer.lock
             composer install
-            composer install --no-dev --optimize-autoloader            
+            composer dump-autoload -o           
             sudo systemctl restart apache2
             sudo systemctl restart mysql
            
