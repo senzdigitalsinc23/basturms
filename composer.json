@@ -32,7 +32,7 @@
             "Repositories\\": "Repositories/"
         },
         "files": [
-            "Core/helpers.php"
+            "./Core/helpers.php"
         ]       
     },
     "autoload-dev": {
