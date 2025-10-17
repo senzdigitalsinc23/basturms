@@ -31,7 +31,7 @@ jobs:
           host: ${{ env.EC2_HOST }}
           username: ubuntu
           key: ${{ env.EC2_SSH_KEY }}
-          script: |
+          script:
             cd /var/www/basturms
             git pull origin main
             composer install
