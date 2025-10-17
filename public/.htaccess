@@ -1,24 +1,14 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    
-    # Set the correct base path for AMPPS
-    RewriteBase /basturms/public/
-    
-    # Handle index.php front controller
-    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteBase /
+
+    # Don't rewrite existing files or directories
     RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteRule ^ index.php [L]
+    RewriteCond %{REQUEST_FILENAME} !-d
 
-    # Deny access to sensitive files
-    <FilesMatch "\.(env|env\.example|git|gitignore|lock|json|yml|yaml|log|sql|bak|ini)$">
-        Require all denied
-    </FilesMatch>
-</IfModule>
+    # Prevent rewriting index.php to itself
+    RewriteCond %{REQUEST_URI} !^/index\.php$
 
-# Security headers (optional but recommended)
-<IfModule mod_headers.c>
-    Header always set X-Frame-Options "SAMEORIGIN"
-    Header always set X-Content-Type-Options "nosniff"
-    Header always set Referrer-Policy "strict-origin-when-cross-origin"
-    Header always set X-XSS-Protection "1; mode=block"
+    # Redirect everything else to index.php
+    RewriteRule ^ index.php [QSA,L]
 </IfModule>
