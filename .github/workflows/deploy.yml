@@ -26,6 +26,7 @@ jobs:
 
       - name: Install dependencies
         run: composer install --no-dev --optimize-autoloader
+
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -36,8 +37,10 @@ jobs:
           script: |
             cd /var/www/basturms
             git pull https://github.com/senzdigitalsinc23/basturms.git
-            composer install
-            composer dump-autoload -o           
+            composer install --no-dev --optimize-autoloader
+            composer dump-autoload         
             sudo systemctl restart apache2
             sudo systemctl restart mysql
+
+            echo "✅ Deployment successful!"
            
