@@ -60,7 +60,7 @@ class Request
             $input = file_get_contents('php://input');
             $data = json_decode($input, true) ?? [];
             $this->post = $data;
-        }echo json_encode($this->post);exit;
+        }
 
         if ($key === null) return $this->post;
         return $this->post[$key] ?? $default;
