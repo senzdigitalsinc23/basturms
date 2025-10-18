@@ -11,6 +11,12 @@ class AuthMiddleware implements MiddlewareInterface
 {
     public function handle(Request $request, Response $response, callable $next): Response
     {
+        // Debug: log incoming Authorization header
+        $logPath = dirname(__DIR__, 2) . '/storage/logs/api_debug.log';
+        $authHeader = getallheaders()['Authorization'] ?? getallheaders()['authorization'] ?? '';
+        $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+        file_put_contents($logPath, date('c') . " [AuthMiddleware] From IP $ip Authorization: $authHeader\n", FILE_APPEND);
+
         if (!Session::get('user')) {
             // JWT check
             $headers = getallheaders();

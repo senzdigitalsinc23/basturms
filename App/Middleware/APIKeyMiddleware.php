@@ -22,11 +22,14 @@ class APIKeyMiddleware
 
     public function handle(Request $request, Response $response, callable $next): Response
     {
-        // Accept API key from header or query
+        // Debug: log incoming X-API-KEY and Authorization header
+        $logPath = dirname(__DIR__, 2) . '/storage/logs/api_debug.log';
         $authorization = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
         $headerKey = $_SERVER['HTTP_X_API_KEY'] ?? '';
-        $queryKey = $_GET['api_key'] ?? '';
+        $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+        file_put_contents($logPath, date('c') . " [APIKeyMiddleware] From IP $ip X-API-KEY: $headerKey | Authorization: $authorization\n", FILE_APPEND);
 
+        // Accept API key from header or query
         $providedKey = '';
 
         if ($headerKey !== '') {
@@ -36,8 +39,8 @@ class APIKeyMiddleware
             if (stripos($authorization, 'ApiKey ') === 0) {
                 $providedKey = trim(substr($authorization, 7));
             }
-        } elseif ($queryKey !== '') {
-            $providedKey = $queryKey;
+        } elseif ($_GET['api_key'] !== '') {
+            $providedKey = $_GET['api_key'] ?? '';
         }
 
         if ($providedKey === '' || (!empty($this->validKeys) && !in_array($providedKey, $this->validKeys, true))) {
