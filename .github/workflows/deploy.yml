@@ -35,7 +35,7 @@ jobs:
           passphrase: ${{ env.EC2_DEPLOY_PASSPHRASE }}
           script: |
             cd /var/www/basturms
-            git pull
+            git pull https://github.com/senzdigitalsinc23/basturms.git
             composer install
             composer dump-autoload -o           
             sudo systemctl restart apache2
