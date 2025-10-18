@@ -17,8 +17,12 @@ use App\Core\Storage;
 
 Config::load(dirname(__DIR__) . '/config');
 
-// Basic PHP error display based on config
-if (!empty(Config::get('app.display_errors')) && Config::get('app.display_errors') === 'true') {
+// Basic PHP error display based on env/config
+if (Config::get('app.env') === 'production') {
+    ini_set('display_errors', '0');
+    ini_set('display_startup_errors', '0');
+    error_reporting(0);
+} elseif (!empty(Config::get('app.display_errors')) && Config::get('app.display_errors') === 'true') {
     ini_set('display_errors', '1');
     ini_set('display_startup_errors', '1');
     error_reporting(E_ALL);
