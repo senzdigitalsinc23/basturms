@@ -30,7 +30,7 @@ $router->getApi('v1', '/profile', [AuthController::class, 'profile'], [APIKeyMid
 $router->getApi('v1', '/admin/users', [AdminController::class, 'users'], [APIKeyMiddleware::class, AuthMiddleware::class]);
 
 // v1 Students
-$router->getApi('v1', '/students', [StudentController::class, 'index'], [AuthMiddleware::class, APIKeyMiddleware::class]);
+$router->getApi('v1', '/students', [StudentController::class, 'index'], [AuthMiddleware::class]);
 $router->getApi('v1', '/students/show', [StudentController::class, 'show'], [APIKeyMiddleware::class]);
 $router->getApi('v1', '/students/download', [StudentController::class, 'exportCSV'], [APIKeyMiddleware::class, AuthMiddleware::class]);
 $router->postApi('v1', '/students/upload', [StudentController::class, 'importCSV'], [APIKeyMiddleware::class, AuthMiddleware::class]);

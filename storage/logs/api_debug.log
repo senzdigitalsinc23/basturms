@@ -1,2 +1,4 @@
 2025-10-18T02:30:50+00:00 [AuthMiddleware] From IP 127.0.0.1 Authorization: 
 2025-10-18T02:30:50+00:00 [APIKeyMiddleware] From IP 127.0.0.1 X-API-KEY: devKey123 | Authorization: 
+2025-10-19T12:36:28+00:00 [AuthMiddleware] JWT Exception: Call to undefined method App\Core\Container::get()
+2025-10-19T12:41:52+00:00 [AuthMiddleware] JWT Exception: Call to undefined method App\Core\Container::get()
