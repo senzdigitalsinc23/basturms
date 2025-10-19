@@ -27,7 +27,7 @@ class APIKeyMiddleware
         $authorization = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
         $headerKey = $_SERVER['HTTP_X_API_KEY'] ?? '';
         $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-        file_put_contents($logPath, date('c') . " [APIKeyMiddleware] From IP $ip X-API-KEY: $headerKey | Authorization: $authorization\n", FILE_APPEND);
+        //file_put_contents($logPath, date('c') . " [APIKeyMiddleware] From IP $ip X-API-KEY: $headerKey | Authorization: $authorization\ | Valid Keys: " . implode(',', $this->validKeys) . "\n", FILE_APPEND);
 
         // Accept API key from header or query
         $providedKey = '';
