@@ -22,8 +22,9 @@ class StudentController
 
     public function show(Request $request, Response $response): Response
     {
+        //echo json_encode($request->getPost());exit;
         try {
-            $studentNo = $request->getQuery()['student_no'] ?? null;
+            $studentNo = $request->getPost('student_no') ?? null;
             if (!$studentNo) {
                 $response->json([
                     'success' => false,
@@ -43,11 +44,12 @@ class StudentController
                 return $response;
             }
 
-            $response->json([
+            $response->setContent(json_encode([
                 'success' => true,
                 'message' => 'Student retrieved successfully',
                 'data' => $student
-            ], 200);
+            ]));
+
             return $response;
         } catch (\Exception $e) {
             $response->json([
@@ -136,28 +138,33 @@ class StudentController
             // Create student
             $result = $this->studentService->createStudent($validation['data']);
 
-            $response->json(['success' => true, 'message' => 'Student created successfully', 'data' => $result], 201);
+            $response->setStatusCode(201);
+            $response->setHeader('Content-Type', 'application/json');
+            $response->setHeader('Access-Control-Allow-Origin', '*');
+            $response->setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
+
+            $response->setContent(json_encode(['success' => true, 'message' => 'Student created successfully', 'data' => $result]));
 
             return $response;
 
         } catch (StudentException $e) {
-            $response->json([
+            $response->setContent(json_encode([
                 'success' => false,
                 'message' => $e->getMessage(),
                 'data' => null
-            ], $e->getCode());
+            ], $e->getCode()));
             
             return $response;
 
         } catch (\Exception $e) {
             $response->setStatusCode(500);
             $response->setHeader('Content-Type', 'application/json');
-            $response->json([
+            $response->setContent(json_encode([
                 'success' => false,
                 'message' => 'Internal server error',
                 'error' => $e->getMessage(),
                 'data' => null
-            ], 500);
+            ], 500));
             
             return $response;
         }
@@ -172,12 +179,12 @@ class StudentController
             $validation = $this->validationService->validateStudentStatusUpdate($data);
             
             if (!$validation['success']) {
-                $response->json([
+                $response->setContent(json_encode([
                     'success' => false,
                     'message' => 'Validation failed',
                     'errors' => $validation['errors'],
                     'data' => null
-                ], 422);
+                ], 422));
                 
                 return $response;
             }
@@ -191,16 +198,20 @@ class StudentController
                 $validatedData['status']
             );
 
-            $response->json(['success' => true, 'message' => 'Student freezed successfully', 'data' => $result], 200);
+            $response->setStatusCode(200);
+            $response->setHeader('Content-Type', 'application/json');
+            $response->setHeader('Access-Control-Allow-Origin', '*');
+            $response->setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
+            $response->setContent(json_encode(['success' => true, 'message' => 'Student freezed successfully', 'data' => $result]));
 
             return $response;
 
         } catch (StudentException $e) {
-            $response->json([
+            $response->setContent(json_encode([
                 'success' => false,
                 'message' => $e->getMessage(),
                 'data' => null
-            ], $e->getCode());
+            ], $e->getCode()));
             
             return $response;
 
