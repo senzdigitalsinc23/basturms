@@ -3,3 +3,4 @@
 2025-10-19T12:36:28+00:00 [AuthMiddleware] JWT Exception: Call to undefined method App\Core\Container::get()
 2025-10-19T12:41:52+00:00 [AuthMiddleware] JWT Exception: Call to undefined method App\Core\Container::get()
 2025-10-19T13:30:32+00:00 [AuthMiddleware] JWT Exception: Call to undefined method App\Core\Container::get()
+2025-10-20T15:05:27+00:00 [AuthMiddleware] JWT Exception: Call to undefined method App\Core\Container::get()
