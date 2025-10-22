@@ -152,10 +152,55 @@ class StudentService
         }
         $guardians = $this->studentRepository->getGuardians($studentNo);
         $emergency = $this->studentRepository->getEmergencyContact($studentNo);
+        $payments = $this->studentRepository->getStudentPayments($studentNo);
+        $attendance = $this->studentRepository->getStudentAttendance($studentNo);
+        $billItems = $this->studentRepository->getStudentBillItems($studentNo);
+        $clubs = $this->studentRepository->getStudentClubs($studentNo);
+        $sportsTeams = $this->studentRepository->getStudentSportsTeams($studentNo);
+        $documents = $this->studentRepository->getStudentDocuments($studentNo);
 
-        $student['guardians'] = $guardians;
-        $student['emergency_contact'] = $emergency;
-        return $student;
+        // Now split into requested groups
+        $result = [
+            'student_info' => [
+                'id' => $student['id'] ?? null,
+                'student_no' => $student['student_no'],
+                'first_name' => $student['first_name'],
+                'last_name' => $student['last_name'],
+                'other_name' => $student['other_name'] ?? '',
+                'gender' => $student['gender'],
+                'dob' => $student['dob'],
+                'nhis_no' => $student['nhis_no'],
+                'created_at' => $student['created_at'] ?? null,
+                'updated_at' => $student['updated_at'] ?? null,
+                'created_by' => $student['created_by'] ?? null,
+            ],
+            'contact_address' => [
+                'email' => $student['email'] ?? '',
+                'phone' => $student['phone'] ?? '',
+                'country_id' => $student['country_id'] ?? '',
+                'city' => $student['city'] ?? '',
+                'hometown' => $student['hometown'] ?? '',
+                'residence' => $student['residence'] ?? '',
+                'house_no' => $student['house_no'] ?? '',
+                'gps_no' => $student['gps_no'] ?? '',
+            ],
+            'admission_info' => [
+                'admission_no' => $student['admission_no'] ?? '',
+                'admission_status' => $student['admission_status'] ?? '',
+                'class_assigned' => $student['class_assigned'] ?? '',
+                'class_name' => $student['class_name'] ?? '',
+                'enrollment_date' => $student['enrollment_date'] ?? '',
+            ],
+            'guardians' => $guardians,
+            'emergency_contact' => $emergency,
+            'payment_history' => $payments,
+            'attendance_history' => $attendance,
+            'bill_items' => $billItems,
+            'clubs' => $clubs,
+            'sports_teams' => $sportsTeams,
+            'uploaded_documents' => $documents,
+        ];
+        return $result;
     }
 
     public function exportStudents(): array

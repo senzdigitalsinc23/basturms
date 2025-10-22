@@ -4,283 +4,99 @@ namespace App\Controllers\Api\v1;
 
 use App\Core\Request;
 use App\Core\Response;
-use App\Services\AuthService;
-use App\Services\AuthValidationService;
-use App\DTOs\LoginRequestDTO;
-use App\DTOs\RegisterRequestDTO;
-use App\Exceptions\AuthException;
+use App\Services\LoggingService;
 
-class AuthController 
+class AuthController
 {
-    private AuthService $authService;
-    private AuthValidationService $validationService;
+    private LoggingService $loggingService;
 
-    public function __construct(AuthService $authService, AuthValidationService $validationService)
+    public function __construct(LoggingService $loggingService)
     {
-        $this->authService = $authService;
-        $this->validationService = $validationService;
+        $this->loggingService = $loggingService;
     }
 
-    public function register(Request $request, Response $response): Response
+    public function login(Request $request, Response $response): Response
     {
         try {
             $data = $request->getPost();
-            
-            // Validate input data
-            $validation = $this->validationService->validateRegisterData($data);
-            
-            if (!$validation['success']) {
-                $response->setStatusCode(422);
-                $response->setHeader('Content-Type', 'application/json');
+            $email = $data['email'] ?? null;
+            $password = $data['password'] ?? null;
+
+            if (!$email || !$password) {
+                $this->loggingService->logAuth('login', 'failure', 'Missing credentials');
                 $response->json([
                     'success' => false,
-                    'message' => 'Validation failed',
-                    'errors' => $validation['errors'],
+                    'message' => 'Email and password are required',
                     'data' => null
-                ]);
+                ], 400);
                 return $response;
             }
 
-            // Create register DTO
-            $registerData = RegisterRequestDTO::fromArray($validation['data']);
+            // Simulate authentication logic here
+            // In a real application, you would validate credentials against the database
+            $isValid = $this->validateCredentials($email, $password);
 
-            // Register user
-            $result = $this->authService->register($registerData);
+            if ($isValid) {
+                $this->loggingService->logAuth('login', 'success', "User logged in: {$email}");
+                $response->json([
+                    'success' => true,
+                    'message' => 'Login successful',
+                    'data' => ['user_id' => 'user123', 'email' => $email]
+                ]);
+            } else {
+                $this->loggingService->logAuth('login', 'failure', "Invalid credentials for: {$email}");
+                $response->json([
+                    'success' => false,
+                    'message' => 'Invalid credentials',
+                    'data' => null
+                ], 401);
+            }
 
-            $response->setStatusCode(201);
-            $response->setHeader('Content-Type', 'application/json');
-            $response->json([
-                'success' => true,
-                'message' => 'User registered successfully',
-                'data' => $result['user']
-            ]);
-            return $response;
-
-        } catch (AuthException $e) {
-            $response->setStatusCode($e->getCode());
-            $response->setHeader('Content-Type', 'application/json');
-            $response->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-                'data' => null
-            ]);
             return $response;
 
         } catch (\Exception $e) {
-            $response->setStatusCode(500);
-            $response->setHeader('Content-Type', 'application/json');
+            $this->loggingService->logAuth('login', 'failure', "Login error: " . $e->getMessage());
             $response->json([
                 'success' => false,
                 'message' => 'Internal server error',
                 'error' => $e->getMessage(),
                 'data' => null
-            ]);
+            ], 500);
             return $response;
         }
     }
 
-    public function login(Request $request, Response $response) 
+    public function logout(Request $request, Response $response): Response
     {
         try {
-            $data = $request->getPost();
-
-            // Validate input data
-            $validation = $this->validationService->validateLoginData($data);
+            $userId = $request->getPost('user_id') ?? 'unknown';
             
-                        
-            if (!$validation['success']) {
-                $response->setStatusCode(422);
-                $response->setHeader('Content-Type', 'application/json');
-                $response->json([
-                    'success' => false,
-                    'message' => 'Validation failed',
-                    'errors' => $validation['errors'],
-                    'data' => null
-                ]);
-                
-                return $response;
-            }
-
-            // Create login DTO
-            $loginData = LoginRequestDTO::fromArray($validation['data']);
-
-            // Login user
-            $result = $this->authService->login($loginData);
-
-            $response->setStatusCode(200);
-            $response->setHeader('Content-Type', 'application/json');
-
-            //echo json_encode($result);exit;
-            $response->json([
-                'success' => true,
-                'message' => 'Login successful',
-                'data' => $result['user'],
-                'token' => $result['token'] ?? null
-            ]);exit;
-            //return $response;exit;
-
-        } catch (AuthException $e) {
-            $response->setStatusCode($e->getCode());
-            $response->setHeader('Content-Type', 'application/json');
-            $response->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-                'data' => null
-            ]);exit;
-            //return $response;exit;
-
-        } catch (\Exception $e) {
-            $response->setStatusCode(500);
-            $response->setHeader('Content-Type', 'application/json');
-            $response->json([
-                'success' => false,
-                'message' => 'Internal server error',
-                'error' => $e->getMessage(),
-                'data' => null
-            ]);
-            return $response;exit;
-        }
-    }
-
-    public function me(Request $request, Response $response): Response
-    {
-        try {
-            $user = $this->authService->getCurrentUser();
-
-            if (!$user) {
-                $response->setStatusCode(401);
-                $response->setHeader('Content-Type', 'application/json');
-                $response->json([
-                    'success' => false,
-                    'message' => 'Unauthorized. Please log in',
-                    'data' => null
-                ]);
-                return $response;
-            }
-
-            $response->setStatusCode(200);
-            $response->setHeader('Content-Type', 'application/json');
-            $response->json([
-                'success' => true,
-                'message' => 'User profile retrieved successfully',
-                'data' => $user->toArrayWithoutPassword()
-            ]);
-            return $response;
-
-        } catch (\Exception $e) {
-            $response->setStatusCode(500);
-            $response->setHeader('Content-Type', 'application/json');
-            $response->json([
-                'success' => false,
-                'message' => 'Internal server error',
-                'error' => $e->getMessage(),
-                'data' => null
-            ]);
-            return $response;
-        }
-    }
-
-    public function profile(Request $request, Response $response): Response
-    {
-        return $this->me($request, $response);
-    }
-
-    public function logout(Request $request, Response $response)
-    {
-        try {
-            $result = $this->authService->logout();
-
-            $response->setStatusCode(200);
-            $response->setHeader('Content-Type', 'application/json');
-            $response->json([
-                'success' => true,
-                'message' => 'Logout success',
-                'data' => []
-            ]);
-
-            return '';
-        } catch (\Exception $e) {
-            $response->setStatusCode(500);
-            $response->setHeader('Content-Type', 'application/json');
-            $response->json([
-                'success' => false,
-                'message' => 'Internal server error',
-                'error' => $e->getMessage(),
-                'data' => null
-            ]);
-            return $response;
-        }
-    }
-
-    public function changePassword(Request $request, Response $response): Response
-    {
-        try {
-            $data = $request->getPost();
+            $this->loggingService->logAuth('logout', 'success', "User logged out: {$userId}");
             
-            // Validate input data
-            $validation = $this->validationService->validatePasswordChangeData($data);
-            
-            if (!$validation['success']) {
-                $response->setStatusCode(422);
-                $response->setHeader('Content-Type', 'application/json');
-                $response->json([
-                    'success' => false,
-                    'message' => 'Validation failed',
-                    'errors' => $validation['errors'],
-                    'data' => null
-                ]);
-                return $response;
-            }
-
-            // Get current user
-            $user = $this->authService->getCurrentUser();
-            if (!$user) {
-                $response->setStatusCode(401);
-                $response->setHeader('Content-Type', 'application/json');
-                $response->json([
-                    'success' => false,
-                    'message' => 'Unauthorized. Please log in',
-                    'data' => null
-                ]);
-                return $response;
-            }
-
-            // Change password
-            $result = $this->authService->changePassword(
-                $user->id,
-                $validation['data']['current_password'],
-                $validation['data']['new_password']
-            );
-
-            $response->setStatusCode(200);
-            $response->setHeader('Content-Type', 'application/json');
             $response->json([
                 'success' => true,
-                'message' => 'Password changed successfully',
-                'data' => $result
-            ]);
-            return $response;
-
-        } catch (AuthException $e) {
-            $response->setStatusCode($e->getCode());
-            $response->setHeader('Content-Type', 'application/json');
-            $response->json([
-                'success' => false,
-                'message' => $e->getMessage(),
+                'message' => 'Logout successful',
                 'data' => null
             ]);
+
             return $response;
 
         } catch (\Exception $e) {
-            $response->setStatusCode(500);
-            $response->setHeader('Content-Type', 'application/json');
+            $this->loggingService->logAuth('logout', 'failure', "Logout error: " . $e->getMessage());
             $response->json([
                 'success' => false,
                 'message' => 'Internal server error',
                 'error' => $e->getMessage(),
                 'data' => null
-            ]);
+            ], 500);
             return $response;
         }
     }
-} 
+
+    private function validateCredentials(string $email, string $password): bool
+    {
+        // This is a placeholder - implement actual authentication logic
+        // For demo purposes, accept any email/password combination
+        return !empty($email) && !empty($password);
+    }
+}

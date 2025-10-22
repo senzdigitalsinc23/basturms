@@ -77,10 +77,12 @@ class StudentRepository
     public function findStudentByNo(string $studentNo): ?array
     {
         $sql = "SELECT s.*, sc.email, sc.phone, sc.country_id, sc.city, sc.hometown, sc.residence, sc.house_no, sc.gps_no,
-                       ad.admission_no, ad.admission_status, ad.class_assigned, ad.enrollment_date
+                       ad.admission_no, ad.admission_status, ad.class_assigned, ad.enrollment_date,
+                       c.class_name
                 FROM students s
                 LEFT JOIN student_contact sc ON s.student_no = sc.student_no
                 LEFT JOIN admission_details ad ON s.student_no = ad.student_no
+                LEFT JOIN classes c ON ad.class_assigned = c.class_id
                 WHERE s.student_no = :student_no";
         
         $stmt = $this->db->prepare($sql);
@@ -300,5 +302,104 @@ class StudentRepository
         }
 
         return $students;
+    }
+
+    /**
+     * Get student payment history
+     */
+    public function getStudentPayments(string $studentNo): array
+    {
+        $sql = "SELECT sp.*, s.first_name, s.last_name 
+                FROM payment_history sp
+                LEFT JOIN students s ON sp.student_no = s.student_no
+                WHERE sp.student_no = :student_no
+                ORDER BY sp.payment_date DESC";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['student_no' => $studentNo]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Get student attendance history
+     */
+    public function getStudentAttendance(string $studentNo, int $limit = 30): array
+    {
+        $sql = "SELECT a.*, s.first_name, s.last_name 
+                FROM attendance_history a
+                LEFT JOIN students s ON a.student_no = s.student_no
+                WHERE a.student_no = :student_no
+                ORDER BY a.att_date DESC
+                LIMIT :limit";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindValue(':student_no', $studentNo, PDO::PARAM_STR);
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Get student bill items
+     */
+    public function getStudentBillItems(string $studentNo): array
+    {
+        $sql = "SELECT sbi.*, s.first_name, s.last_name 
+                FROM student_bill_items sbi
+                LEFT JOIN students s ON sbi.student_no = s.student_no
+                WHERE sbi.student_no = :student_no
+                ORDER BY sbi.due_date ASC, sbi.created_at DESC";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['student_no' => $studentNo]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Get student clubs
+     */
+    public function getStudentClubs(string $studentNo): array
+    {
+        $sql = "SELECT sc.*, s.first_name, s.last_name 
+                FROM student_clubs sc
+                LEFT JOIN students s ON sc.student_no = s.student_no
+                WHERE sc.student_no = :student_no
+                ORDER BY sc.join_date DESC";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['student_no' => $studentNo]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Get student sports teams
+     */
+    public function getStudentSportsTeams(string $studentNo): array
+    {
+        $sql = "SELECT sst.*, s.first_name, s.last_name 
+                FROM student_sports_teams sst
+                LEFT JOIN students s ON sst.student_no = s.student_no
+                WHERE sst.student_no = :student_no
+                ORDER BY sst.join_date DESC";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['student_no' => $studentNo]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Get student uploaded documents
+     */
+    public function getStudentDocuments(string $studentNo): array
+    {
+        $sql = "SELECT sd.*, s.first_name, s.last_name 
+                FROM student_documents sd
+                LEFT JOIN students s ON sd.student_no = s.student_no
+                WHERE sd.student_no = :student_no AND sd.status = 'active'
+                ORDER BY sd.uploaded_at DESC";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['student_no' => $studentNo]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }
