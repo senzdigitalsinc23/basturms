@@ -1,0 +1,509 @@
+<?php
+namespace App\Controllers\Api\v1;
+
+use App\Core\Database;
+use App\Core\Request;
+use App\Core\Validator;
+use App\Models\Student;
+use App\Models\User;
+use Database\ORM\Model;
+
+class StudentController
+{
+    public function __construct() {
+        if(! isLoggedIn()){
+            return response()->json([
+                'success' => false, 
+                'message' => "You need to log in",
+                'redirect' => '/web/login'
+            ]);
+        }
+    }
+
+    public function index(Request $request)
+    {
+        header('Content-Type: application/json');
+
+        $page   = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+        $limit  = isset($_GET['limit']) ? (int)$_GET['limit'] : 7;
+        $search = $_GET['search'] ?? null;
+        $status = $_GET['status'] ?? null;        
+
+        $offset = ($page - 1) * $limit;
+
+        $total    = '';
+        $pages    = '';
+
+        $students = [];
+
+        //
+
+        if (($_GET['search'] && $_GET['search'] != '') || $_GET['status']) {
+            $students = Student::search($limit, $offset, $search, $status, 'student_no');
+//echo json_encode(['success' => true, 'message' => $students, 'status' => $status]);exit;
+            $total    = Student::countStudents($status, $search);
+            $pages = ceil($total / $limit);
+//echo json_encode(['success' => true, 'message' => $students, 'status' => $total]);exit;
+            //echo json_encode(['success' => true, 'message' => $pages]);exit;
+        }else{
+             $total    = Student::countStudents('admission_status', $status);
+            $pages    = ceil($total / $limit);
+            
+            $students = Student::paginate($limit, $offset, 'student_no');
+        } 
+        
+
+        if ($students) {
+            return response()->json([
+                'success' => true, 
+                'message' => "All students successfully fetched.",
+                'paginate' => [
+                    'total'    => $total,
+                    'page'     => $page,
+                    'limit'    => $limit,
+                    'pages'    => $pages,
+                    'search'   => $search,
+                    'offset' => $offset
+                ],
+                'students'   => $students
+            ]);
+        }
+
+        return response()->json([
+            'success' => false, 
+            'message' => "No Record Found"
+        ]);
+    }
+
+    public function freeze(Request $request) {
+        $id = $request->getPost('id');
+
+        $status = $request->getPost('status');
+
+        //echo json_encode(['success' => true, 'message' => $status]);exit;
+        Student::delete($id, $status);exit;
+    }
+
+
+    //Add new student record
+    public function create(Request $request) {
+
+        $db = Database::getInstance()->getConnection();
+        
+        $status = '';
+        $message = '';
+        $code  = '';
+
+        $data = $request->getPost();
+
+        $messages = [
+            'guardian_name.required' => 'Guardian name is required.',
+            'guardian_name.min'          => 'Guardian name must be atleast 5 characters.',
+            'email.unique'           => 'Email already exists',
+            'phone.unique'           => 'Phone number already exists'
+        ];
+
+        $validator = new Validator($data, [
+            // Admission & Basic
+            'admission_no'     => 'bail|required|string|min:8|max:10|unique:admission_details,admission_no',
+            'status'           => 'bail|required|in:active,inactive,pending,suspended,graduated,transferred,stopped',
+            'class_id'         => 'bail|required|string|exists:classes,class_id', 
+            'enrollment_date'  => 'bail|required|date',        
+
+            // Personal
+            'student_no'       => 'bail|required|string|unique:students,student_no|min:17|max:20',
+            'first_name'       => 'bail|required|string|min:2|max:100',
+            'last_name'        => 'bail|required|string|min:2|max:100',
+            'other_name'       => 'bail|nullable|string|max:100',
+            'dob'              => 'bail|required|date|before:-2 years|after:-25 years',
+            'gender'           => 'bail|required|in:male,female,other',
+            'nhis_no'           => 'bail|required|min:8|max:8',
+            
+
+            // Contact
+            'email'            => 'bail|nullable|unique:student_contact,email|email',
+            'phone'            => 'bail|nullable|string|unique:student_contact,phone|regex:/^[0-9]{7,15}$/',
+            'country_id'       => 'bail|required|string|exists:countries,country_id',
+            'city'             => 'bail|nullable|string|max:100',
+            'hometown'         => 'bail|required|string|max:100',
+            'residence'        => 'bail|required|string|max:150',
+            'house_no'         => 'bail|required|string|max:50',
+            'gps_no'           => 'bail|required|string|max:50',
+
+            // Guardian
+            'father_name'        => 'bail|required|string|min:5',
+            'father_phone'        => 'bail|required|string|regex:/^[0-9]{7,15}$/',
+            'father_email'        => 'bail|nullable|email',
+
+            'mother_name'        => 'bail|required|string|min:5',
+            'mother_phone'        => 'bail|required|string|regex:/^[0-9]{7,15}$/',
+            'mother_email'        => 'bail|nullable|email',
+            
+            // Emergency contact
+            'emergency_name'        => 'bail|required|string|min:5',
+            'emergency_phone'        => 'bail|required|string|regex:/^[0-9]{7,15}$/',
+            'emergency_relationship'        => 'bail|required|string'
+            
+        ], $db, $messages);       
+
+        //echo json_encode(['success' => true, 'message' => $data['phone']]);exit;
+    
+         //echo json_encode(['success' => true, 'message' => "None Exists "]);exit;
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()]);
+            exit;
+        }else {
+            $status = true;
+            $message = 'User successfully registered';
+            $code = 201;
+
+
+            $personal_details = [
+                'student_no'    =>  $_POST['student_no'],
+                'first_name'    =>  $_POST['first_name'],
+                'last_name'     =>  $_POST['last_name'],
+                'other_name'    =>  $_POST['other_name'],
+                'dob'           =>  $_POST['dob'],
+                'gender'        =>  $_POST['gender'],
+                'created_by'    =>  $_SESSION['user']['id']
+            ];
+
+            $contact = [
+                'student_no'    =>  $_POST['student_no'],
+                'email'         =>   $_POST['email'] != ''  ? $_POST['email'] : explode('-',$_POST['student_no'])[2], 
+                'phone'         =>   $_POST['phone'] != ''  ? $_POST['phone'] : explode('-',$_POST['student_no'])[2], 
+                'country_id'    =>   $_POST['country_id'], 
+                'city'          =>   $_POST['city'], 
+                'hometown'      =>   $_POST['hometown'], 
+                'residence'     =>   $_POST['residence'], 
+                'house_no'      =>   $_POST['house_no'], 
+                'gps_no'        =>   $_POST['gps_no']
+            ];
+
+            $father = [
+                'guardian_id'    =>  $_POST['student_no'],
+                'guardian_name'             =>   $_POST['father_name'],
+                'guardian_phone'            => $_POST['father_phone'],
+                'guardian_email'            => $_POST['father_email'],
+                'guardian_relationship'     => 'father'
+            ];
+
+            $mother = [
+                'guardian_id'    =>  $_POST['student_no'],
+                'guardian_name'             =>   $_POST['mother_name'],
+                'guardian_phone'            => $_POST['mother_phone'],
+                'guardian_email'            => $_POST['mother_email'],
+                'guardian_relationship'     => 'mother'
+            ];
+
+            $emergency = [
+                'emergency_id'    =>  $_POST['student_no'],
+                'emergency_name'             =>   $_POST['emergency_name'],
+                'emergency_phone'            => $_POST['emergency_phone'],
+                'emergency_email'            => $_POST['emergency_email'],
+                'emergency_relationship'     => $_POST['emergency_relationship']
+            ];
+
+            $admission = [
+                'student_no'       => $_POST['student_no'],
+                'admission_no'     => $_POST['admission_no'],
+                'admission_status'           => $_POST['status'],
+                'class_assigned'         => $_POST['class_id'],
+                'enrollment_date'  => $_POST['enrollment_date']
+            ];
+
+            $user = [
+                'user_id'       => $_POST['student_no'],
+                'email' => $_POST['email'] != ''  ? $_POST['email'] : explode('-',$_POST['student_no'])[2],
+                'username' => $_POST['email'] != ''  ? $_POST['email'] : explode('-',$_POST['student_no'])[2],
+                'password' => password_hash(ucfirst($_POST['first_name'][0]) . ucfirst($_POST['last_name']) . '123' , PASSWORD_BCRYPT),
+                'role_id'   => '20',
+                'status'    =>  'inactive'
+            ];
+
+            try {
+                $db->beginTransaction();
+
+                    Student::create($personal_details);
+
+                    Model::create($contact, 'student_contact');
+
+                    Model::create($father, 'guardian_info');
+
+                    Model::create($mother, 'guardian_info');
+
+                    Model::create($emergency, 'emergency_contact');
+
+                    Model::create($admission, 'admission_details');
+
+                    Model::create($user, 'users');
+                
+                $db->commit();
+            } catch (\Throwable $th) {
+                $db->rollBack();
+                return response()->json(['success' => false, 'errors' => $th]);
+                
+            }
+
+            
+        }
+        
+        return response()->json(['success' => $status, 'message' => $message, 'user' => $data], $code);exit;
+    }
+
+    // Export students to CSV
+    public function exportCsv()
+    {
+        $filename = "students_export_" . date("Y-m-d_H-i-s") . ".csv";
+
+        // Set headers for browser download
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+
+        // Open output buffer as a "file"
+        $output = fopen('php://output', 'w');
+
+        $students = Student::all();
+
+        $columns = array_keys($students[2]);
+
+       /*  [
+            'Admission No', 'First Name', 'Last Name', 'Email', 'Phone',
+            'Gender', 'DOB', 'Class', 'Address', 'Guardian Name',
+            'Guardian Contact', 'Status'
+        ] */
+
+        // CSV Header row
+        fputcsv($output, $columns);
+
+        // Fetch all students
+        foreach ($students as $student) {
+            foreach ($columns as $column) {
+                $student[$column] = $student[$column];
+            }
+
+            fputcsv($output, $student);
+        }
+
+        fclose($output);
+        exit; // Important to stop any extra output
+    }
+
+    // Import students from CSV
+    public function importCsv()
+    {
+        if (isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] == 0) {
+            $file = fopen($_FILES['csv_file']['tmp_name'], 'r');
+
+            // Skip header row
+            $headers = fgetcsv($file); 
+
+            
+
+            $count = 0;
+
+            $students = [];
+            $contact = [];
+            $mother = [];
+            $father = [];
+            $emergency = [];
+            $admission = [];
+            $user = [];
+            $studentNo = '';
+            $status = '';
+
+            $totalUploaded = 0;
+            $totalRecords = 0;
+           
+
+            while (($row = fgetcsv($file)) !== false) {
+                while ($count <= (count($row) - 1)) {
+                    
+                    if ($count <= 2) {
+                        if ($headers[$count] == 'enrollment_date') {
+                            $studentNo = Student::generateStudentNo(admissionDate: $row[$count]);
+                        }
+
+                        if ($headers[$count] == 'admission_status') {
+                            $status =  $row[$count];
+                        }
+
+                        $admission['student_no'] = $studentNo;
+                        $admission[$headers[$count]] = $row[$count];
+                    }else if ($count > 2 && $count <= 7) {
+                        $students['student_no'] = $studentNo;
+                        $students['created_by'] = $_SESSION['user']->id;
+
+                        $students[$headers[$count]] = $row[$count];
+
+                        $firstname = '';
+                        $lastname = '';
+
+                        if ($headers[$count] == 'first_name') {
+                            $firstname = $row[$count];
+                        }
+                        if ($headers[$count] == 'first_name') {
+                            $lastname = $row[$count];
+
+                            $user['password'] = password_hash(ucfirst($firstname[0]) . ucfirst($lastname) . '123' , PASSWORD_BCRYPT);
+                        }
+                        
+                    }else if ($count > 7 && $count <= 15){
+                        $contact['student_no'] = $studentNo;
+                        $contact[$headers[$count]] = $row[$count];
+
+                        if ($headers[$count] == 'email') {
+                            $user['user_id'] = $studentNo;
+                            $user[$headers[$count]] = $row[$count];
+                            $user['username'] = $row[$count] != ''  ? $row[$count] : explode('-',$row[$count])[2];
+                            $user['role_id'] = 20;
+                            $user['status'] = $status;
+                        }
+
+                    }else if ($count > 15 && $count <= 18){
+                        $mother['guardian_id'] = $studentNo;
+                        $mother['guardian_relationship'] = 'mother';
+
+                        if ($headers[$count] == 'mothers_name') {
+                            $mother['guardian_name'] = $row[$count];
+                           
+                        }else if ($headers[$count] == 'mothers_phone') {
+                            $mother['guardian_phone'] = $row[$count];
+                           
+                        }else if ($headers[$count] == 'mothers_email') {
+                            $mother['guardian_email'] = $row[$count];
+                           
+                        }
+                        
+                    }else if ($count > 18 && $count < 22){
+                        $father['guardian_id'] = $studentNo;
+                        $father['guardian_relationship'] = 'father';
+
+                        if ($headers[$count] == 'fathers_name') {
+                            $father['guardian_name'] = $row[$count];
+                           
+                        }else if ($headers[$count] == 'fathers_phone') {
+                            $father['guardian_phone'] = $row[$count];
+                           
+                        }else if ($headers[$count] == 'fathers_email') {
+                            $father['guardian_email'] = $row[$count];
+                            //unset($row[$count]);
+                        }
+                    }else if ($count > 21 && $count <= 25){
+                        $emergency['emergency_id'] = $studentNo;
+                        $emergency[$headers[$count]] = $row[$count];
+                    }
+                    
+                    
+                    $count++;                    
+                } 
+
+
+                $totalRecords++;                
+                if (! Student::where('student_no', $students['student_no'])) {
+                    $totalUploaded++;
+
+                    $db = Database::getInstance()->getConnection();
+
+                    try {
+                        set_time_limit(0);
+                        $db->beginTransaction();
+
+                            Student::create($students);
+
+                            Model::create($contact, 'student_contact');
+
+                            Model::create($father, 'guardian_info');
+
+                            Model::create($mother, 'guardian_info');
+
+                            Model::create($emergency, 'emergency_contact');
+
+                            Model::create($admission, 'admission_details');
+
+                            Model::create($user, 'users');
+                        
+                        $db->commit();
+                    } catch (\Throwable $th) {
+                        $db->rollBack();
+                        return response()->json(['success' => false, 'errors' => $th]);
+                        
+                    }
+                }
+                
+                $count = 0;
+                
+            }
+
+            $message = '';
+            $totalExists = (int) $totalRecords - (int) $totalUploaded;
+
+            if ($totalUploaded == $totalRecords) {
+                $message = `✅ All records uploaded successfully`;
+            }else if($totalUploaded == 0) $message = "❌ $totalRecords student records already exists";
+            else  $message = "✅ $totalUploaded of $totalRecords students imported successfully! $totalExists records already exists";
+
+
+
+            fclose($file);
+
+            return response()->json(['success' => true, 'message' => $message, 'total' => $totalRecords]);
+        } else {
+            return response()->json(['success' => false, 'message' => '❌ Please upload a valid CSV file.']);
+        }
+    }
+
+    // Step 1: Preview CSV
+    public function previewCSV(Request $request)
+    {
+        if (!isset($_FILES['csv_file']) || $_FILES['csv_file']['error'] !== UPLOAD_ERR_OK) {
+            http_response_code(400);
+            return response()->json(['success' => false, 'message' => '❌ Invalid file upload']);
+            exit;
+        }
+
+        $file = $_FILES['csv_file']['tmp_name'];
+        
+        $rows = [];
+        if (($handle = fopen($file, "r")) !== false) {
+            $header = fgetcsv($handle, 1000, ","); // Get first row as header
+            while (($data = fgetcsv($handle, 1000, ",")) !== false) {
+                $rows[] = array_combine($header, $data);
+            }
+            fclose($handle);
+        }//echo json_encode(['success' => false, 'message' => '❌ Invalid file upload', 'files' => $header]);exit;
+
+        return response()->json([
+            'success' => true,
+            'message'   => "Preview generated. Please verify and confirm upload",
+            'header' => $header,
+            'rows' => $rows
+        ]);exit;
+    }
+
+    public function downloadCsvTemplate()
+    {
+        $filename = "student_details_template.csv";
+
+        // Define the headers for the CSV
+        $headers = [
+            'enrollment_date','class_assigned','admission_status','first_name','last_name','other_name','dob (dd-mm-yyyy)','gender',
+            'email','phone','country_id','city','hometown','residence','gps_no','house_no',
+            'mothers_name','mothers_phone','mothers_email','fathers_name','fathers_phone','fathers_email',
+            'emergency_name','emergency_phone','emergency_email','emergency_relationship'
+            
+        ];
+
+        header('Content-Type: text/csv');
+        header("Content-Disposition: attachment; filename={$filename}");
+        $output = fopen("php://output", "w");
+
+        // Write the header row
+        fputcsv($output, $headers);
+
+        fclose($output);
+        exit;
+    }
+
+}
