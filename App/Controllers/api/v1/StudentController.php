@@ -30,22 +30,24 @@ class StudentController
             $studentNo = $request->getPost('student_no') ?? null;
             if (!$studentNo) {
                 $this->loggingService->logAudit('view_student_failed', 'Missing student_no');
-                $response->json([
+                $response->setContent(json_encode([
                     'success' => false,
                     'message' => 'Missing student_no',
                     'data' => null
-                ], 400);
+                ]));
+                $response->setStatusCode(400);
                 return $response;
             }
 
             $student = $this->studentService->getStudentWithRelations((string)$studentNo);
             if (!$student) {
                 $this->loggingService->logAudit('view_student_failed', "Student not found: {$studentNo}");
-                $response->json([
+                $response->setContent(json_encode([
                     'success' => false,
                     'message' => 'Student not found',
                     'data' => null
-                ], 404);
+                ]));
+                $response->setStatusCode(404);
                 return $response;
             }
 
@@ -59,12 +61,13 @@ class StudentController
             return $response;
         } catch (\Exception $e) {
             $this->loggingService->logAudit('view_student_error', "Error retrieving student: " . $e->getMessage());
-            $response->json([
+            $response->setContent(json_encode([
                 'success' => false,
                 'message' => 'Internal server error',
                 'error' => $e->getMessage(),
                 'data' => null
-            ], 500);
+            ]));
+            $response->setStatusCode(500);
             return $response;
         }
     }
@@ -77,12 +80,13 @@ class StudentController
             $validation = $this->validationService->validateStudentSearch($searchData);
             
             if (!$validation['success']) {
-                $response->json([
+                $response->setContent(json_encode([
                     'success' => false, 
                     'message' => 'Validation failed',
                     'errors' => $validation['errors'],
                     'data' => null
-                ]);
+                ]));
+                
                 return $response;
             }
 
@@ -112,12 +116,12 @@ class StudentController
             return $response;
 
         } catch (\Exception $e) {
-             $response->json([
+             $response->setContent(json_encode([
                 'success' => false,
                 'message' => 'Internal server error',
                 'error' => $e->getMessage(),
                 'data' => null
-            ], 500);
+            ]));
             
             return $response;
         }
@@ -133,12 +137,12 @@ class StudentController
             
             if (!$validation['success']) {
                 $this->loggingService->logAudit('create_student_failed', 'Validation failed: ' . json_encode($validation['errors']));
-                $response->json([
+                $response->setContent(json_encode([
                     'success' => false,
                     'message' => 'Validation failed',
                     'errors' => $validation['errors'],
                     'data' => null
-                ], 422);
+                ]));
                 
                 return $response;
             }
@@ -162,7 +166,7 @@ class StudentController
                 'success' => false,
                 'message' => $e->getMessage(),
                 'data' => null
-            ], $e->getCode()));
+            ]));
             
             return $response;
 
@@ -175,7 +179,7 @@ class StudentController
                 'message' => 'Internal server error',
                 'error' => $e->getMessage(),
                 'data' => null
-            ], 500));
+            ]));
             
             return $response;
         }
@@ -196,7 +200,7 @@ class StudentController
                     'message' => 'Validation failed',
                     'errors' => $validation['errors'],
                     'data' => null
-                ], 422));
+                ]));
                 
                 return $response;
             }
@@ -225,7 +229,7 @@ class StudentController
                 'success' => false,
                 'message' => $e->getMessage(),
                 'data' => null
-            ], $e->getCode()));
+            ]));
             
             return $response;
 
@@ -233,12 +237,12 @@ class StudentController
             $this->loggingService->logAudit('freeze_student_error', "Student freeze error: " . $e->getMessage());
             $response->setStatusCode(500);
             $response->setHeader('Content-Type', 'application/json');
-            $response->json([
+            $response->setContent(json_encode([
                 'success' => false,
                 'message' => 'Internal server error',
                 'error' => $e->getMessage(),
                 'data' => null
-            ], $e->getCode());
+            ]));
             
             return $response;
         }

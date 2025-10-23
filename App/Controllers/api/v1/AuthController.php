@@ -24,11 +24,12 @@ class AuthController
 
             if (!$email || !$password) {
                 $this->loggingService->logAuth('login', 'failure', 'Missing credentials');
-                $response->json([
+                $response->setContent(json_encode([
                     'success' => false,
-                    'message' => 'Email and password are required',
+                    'message' => 'Missing credentials',
                     'data' => null
-                ], 400);
+                ]));
+                $response->setStatusCode(400);
                 return $response;
             }
 
@@ -38,30 +39,32 @@ class AuthController
 
             if ($isValid) {
                 $this->loggingService->logAuth('login', 'success', "User logged in: {$email}");
-                $response->json([
+                $response->setContent(json_encode([
                     'success' => true,
                     'message' => 'Login successful',
                     'data' => ['user_id' => 'user123', 'email' => $email]
-                ]);
+                ]));
             } else {
                 $this->loggingService->logAuth('login', 'failure', "Invalid credentials for: {$email}");
-                $response->json([
+                $response->setContent(json_encode([
                     'success' => false,
                     'message' => 'Invalid credentials',
                     'data' => null
-                ], 401);
+                ]));
+                $response->setStatusCode(401);
             }
 
             return $response;
 
         } catch (\Exception $e) {
             $this->loggingService->logAuth('login', 'failure', "Login error: " . $e->getMessage());
-            $response->json([
+            $response->setContent(json_encode([
                 'success' => false,
                 'message' => 'Internal server error',
                 'error' => $e->getMessage(),
                 'data' => null
-            ], 500);
+            ]));
+            $response->setStatusCode(500);
             return $response;
         }
     }
@@ -73,22 +76,23 @@ class AuthController
             
             $this->loggingService->logAuth('logout', 'success', "User logged out: {$userId}");
             
-            $response->json([
+            $response->setContent(json_encode([
                 'success' => true,
                 'message' => 'Logout successful',
                 'data' => null
-            ]);
+            ]));
 
             return $response;
 
         } catch (\Exception $e) {
             $this->loggingService->logAuth('logout', 'failure', "Logout error: " . $e->getMessage());
-            $response->json([
+            $response->setContent(json_encode([
                 'success' => false,
                 'message' => 'Internal server error',
                 'error' => $e->getMessage(),
                 'data' => null
-            ], 500);
+            ]));
+            $response->setStatusCode(500);
             return $response;
         }
     }

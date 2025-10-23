@@ -22,16 +22,18 @@ class AdminController
         try {
             $result = $this->adminService->getAllUsers();
 
-            $response->json(['success' => true, 'message' => 'Users retrieved successfully', 'data' => $result], 200);
+            $response->setContent(json_encode(['success' => true, 'message' => 'Users retrieved successfully', 'data' => $result]));
+            $response->setStatusCode(200);
             return $response;
 
         } catch (\Exception $e) {
-            $response->json([
+            $response->setStatusCode(500);
+            $response->setContent(json_encode([
                 'success' => false, 
                 'message' => 'Internal server error',
                 'data' => null,
                 'error' => $e->getMessage()
-            ], 500);
+            ]));
             return $response;
         }
     }
@@ -44,38 +46,38 @@ class AdminController
             if (!$id) {
                 $response->setStatusCode(400);
                 $response->setHeader('Content-Type', 'application/json');
-                $response->json([
+                $response->setContent(json_encode([
                     'success' => false,
                     'message' => 'User ID is required',
                     'data' => null
-                ], 400);
+                ]));
                 return $response;
             }
 
             $result = $this->adminService->getUserById($id);
 
-            $response->json(['success' => true, 'message' => 'User retrieved successfully', 'data' => $result], );
+            $response->setContent(json_encode(['success' => true, 'message' => 'User retrieved successfully', 'data' => $result]));
             return $response;
 
         } catch (AdminException $e) {
             $response->setStatusCode($e->getCode());
             $response->setHeader('Content-Type', 'application/json');
-            $response->json([
+            $response->setContent(json_encode([
                 'success' => false,
                 'message' => $e->getMessage(),
                 'data' => null
-            ], );
+            ]));
             return $response;
 
         } catch (\Exception $e) {
             $response->setStatusCode(500);
             $response->setHeader('Content-Type', 'application/json');
-            $response->json([
+            $response->setContent(json_encode([
                 'success' => false,
                 'message' => 'Internal server error',
                 'data' => null,
                 'error' => $e->getMessage()
-            ], );
+            ]));
             return $response;
         }
     }
@@ -90,38 +92,40 @@ class AdminController
                 'username' => 'required',
             ]);
             if (!$validation['success']) {
-                $response->json([
+                $response->setStatusCode(422);
+                $response->setHeader('Content-Type', 'application/json');
+                $response->setContent(json_encode([
                     'success' => false,
                     'message' => 'Validation failed',
                     'errors' => $validation['errors'],
                     'data' => null
-                ], 422);
+                ]));
             }
             $id = (int) $validation['data']['id'];
             unset($validation['data']['id']);
             $result = $this->adminService->updateUser($id, $validation['data']);
-            $response->json(['success' => true, 'message' => 'User updated successfully', 'data' => $result], );
+            $response->setContent(json_encode(['success' => true, 'message' => 'User updated successfully', 'data' => $result]));
             return $response;
 
         } catch (AdminException $e) {
             $response->setStatusCode($e->getCode());
             $response->setHeader('Content-Type', 'application/json');
-            $response->json([
+            $response->setContent(json_encode([
                 'success' => false,
                 'message' => $e->getMessage(),
                 'data' => null
-            ], );
+            ]));
             return $response;
 
         } catch (\Exception $e) {
             $response->setStatusCode(500);
             $response->setHeader('Content-Type', 'application/json');
-            $response->json([
+            $response->setContent(json_encode([
                 'success' => false,
                 'message' => 'Internal server error',
                 'data' => null,
                 'error' => $e->getMessage()
-            ], );
+            ]));
             return $response;
         }
     }
@@ -132,35 +136,41 @@ class AdminController
             $id = (int) $request->getPost('id');
             
             if (!$id) {
-                $response->json([
+                $response->setStatusCode(400);
+                $response->setHeader('Content-Type', 'application/json');
+                $response->setContent(json_encode([
                     'success' => false,
                     'message' => 'User ID is required',
                     'data' => null
-                ], 400);
+                ]));
                 return $response;
             }
 
             $result = $this->adminService->deleteUser($id);
 
-            $response->json(['success' => true, 'message' => 'User deleted successfully', 'data' => $result], );
+            $response->setContent(json_encode(['success' => true, 'message' => 'User deleted successfully', 'data' => $result]));
             return $response;
 
         } catch (AdminException $e) {
 
-            $response->json([
+            $response->setStatusCode($e->getCode());
+            $response->setHeader('Content-Type', 'application/json');
+            $response->setContent(json_encode([
                 'success' => false,
                 'message' => $e->getMessage(),
                 'data' => null
-            ], $e->getCode());
+            ]));
             return $response;
 
         } catch (\Exception $e) {
-            $response->json([
+            $response->setStatusCode(500);
+            $response->setHeader('Content-Type', 'application/json');
+            $response->setContent(json_encode([
                 'success' => false,
                 'message' => 'Internal server error',
                 'data' => null,
                 'error' => $e->getMessage()
-            ], 500);
+            ]));
             return $response;
         }
     }
@@ -172,16 +182,18 @@ class AdminController
 
             $response->setStatusCode(200);
             $response->setHeader('Content-Type', 'application/json');
-            $response->json(['success' => true, 'message' => 'Users stats retrieved successfully', 'data' => $result], );
+            $response->setContent(json_encode(['success' => true, 'message' => 'Users stats retrieved successfully', 'data' => $result]));
             return $response;
 
         } catch (\Exception $e) {
-            $response->json([
+            $response->setStatusCode(500);
+            $response->setHeader('Content-Type', 'application/json');
+            $response->setContent(json_encode([
                 'success' => false,
                 'message' => 'Internal server error',
                 'data' => null,
                 'error' => $e->getMessage()
-            ], 500);
+            ]));
             return $response;
         }
     }

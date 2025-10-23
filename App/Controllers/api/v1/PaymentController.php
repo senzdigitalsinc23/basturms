@@ -28,11 +28,12 @@ class PaymentController
             $data['purpose'] ?? null
         ]);
 
-        return $response->json([
+        $response->setContent(json_encode([
             'success' => $result['status'] === 200,
             'message' => $result['status'] === 200 ? 'Payment initiated' : 'Payment failed',
             'data' => $result
-        ]);
+        ]));
+        return $response;
     }
 
     public function verify(Request $request, Response $response)
@@ -48,10 +49,11 @@ class PaymentController
         // $stmt = $pdo->prepare("UPDATE payments SET status = ? WHERE reference = ?");
         // $stmt->execute([$result['status'], $reference]);
 
-        return $response->json([
+        $response->setContent(json_encode([
             'success' => $result['status'] === 200,
             'message' => $result['message'],
             'data' => $result
-        ]);
+        ]));
+        return $response;
     }
 }
