@@ -36,7 +36,7 @@ class StudentController
                     'data' => null
                 ]));
                 $response->setStatusCode(400);
-                return $response;
+                return $response;exit;
             }
 
             $student = $this->studentService->getStudentWithRelations((string)$studentNo);
@@ -48,7 +48,7 @@ class StudentController
                     'data' => null
                 ]));
                 $response->setStatusCode(404);
-                return $response;
+                return $response;exit;
             }
 
             $this->loggingService->logAudit('view_student_success', "Student retrieved: {$studentNo}");
@@ -58,7 +58,7 @@ class StudentController
                 'data' => $student
             ]));
 
-            return $response;
+            return $response;exit;
         } catch (\Exception $e) {
             $this->loggingService->logAudit('view_student_error', "Error retrieving student: " . $e->getMessage());
             $response->setContent(json_encode([
@@ -68,7 +68,7 @@ class StudentController
                 'data' => null
             ]));
             $response->setStatusCode(500);
-            return $response;
+            return $response;exit;
         }
     }
 
@@ -113,7 +113,7 @@ class StudentController
                 ]
             ]));
             
-            return $response;
+            return $response;exit;
 
         } catch (\Exception $e) {
              $response->setContent(json_encode([
@@ -123,7 +123,7 @@ class StudentController
                 'data' => null
             ]));
             
-            return $response;
+            return $response;exit;
         }
     }
 
@@ -144,7 +144,7 @@ class StudentController
                     'data' => null
                 ]));
                 
-                return $response;
+                return $response;exit;
             }
 
             // Create student
@@ -158,7 +158,7 @@ class StudentController
 
             $response->setContent(json_encode(['success' => true, 'message' => 'Student created successfully', 'data' => $result]));
 
-            return $response;
+            return $response;exit;
 
         } catch (StudentException $e) {
             $this->loggingService->logAudit('create_student_error', "Student creation failed: " . $e->getMessage());
@@ -168,7 +168,7 @@ class StudentController
                 'data' => null
             ]));
             
-            return $response;
+            return $response;exit;
 
         } catch (\Exception $e) {
             $this->loggingService->logAudit('create_student_error', "Student creation error: " . $e->getMessage());
@@ -202,7 +202,7 @@ class StudentController
                     'data' => null
                 ]));
                 
-                return $response;
+                return $response;exit;
             }
 
             $validatedData = $validation['data'];
@@ -221,7 +221,7 @@ class StudentController
             $response->setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
             $response->setContent(json_encode(['success' => true, 'message' => 'Student freezed successfully', 'data' => $result]));
 
-            return $response;
+            return $response;exit;
 
         } catch (StudentException $e) {
             $this->loggingService->logAudit('freeze_student_error', "Student freeze failed: " . $e->getMessage());
@@ -231,7 +231,7 @@ class StudentController
                 'data' => null
             ]));
             
-            return $response;
+            return $response;exit;
 
         } catch (\Exception $e) {
             $this->loggingService->logAudit('freeze_student_error', "Student freeze error: " . $e->getMessage());
@@ -244,7 +244,7 @@ class StudentController
                 'data' => null
             ]));
             
-            return $response;
+            return $response;exit;
         }
     }
 }
