@@ -50,9 +50,8 @@ class LoggingService
                 'event' => $event,
                 'event_status' => $status,
                 'details' => $details,
-                'client_info' => json_encode($clientInfo),
-                'ip_address' => $this->getClientIP(),
-                'user_agent' => $this->getUserAgent()
+                'client_info' => json_encode($clientInfo + ['user_agent' => $this->getUserAgent()]),
+                'ip_address' => $this->getClientIP()
             ]);
         } catch (\Exception $e) {
             // Log error but don't break the main flow

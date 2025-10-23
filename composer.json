@@ -29,7 +29,8 @@
             "Database\\":"Database/",
             "Services\\": "Services/",
             "Support\\" : "Support/",
-            "Repositories\\": "Repositories/"
+            "Repositories\\": "Repositories/",
+            "Models\\": "Models/"
         },
         "files": [
             "Core/helpers.php"

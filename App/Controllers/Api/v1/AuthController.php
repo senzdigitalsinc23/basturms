@@ -5,14 +5,18 @@ namespace App\Controllers\Api\v1;
 use App\Core\Request;
 use App\Core\Response;
 use App\Services\LoggingService;
+use App\Services\AuthService;
+use App\DTOs\LoginRequestDTO;
 
 class AuthController
 {
     private LoggingService $loggingService;
+    private AuthService $authService;
 
-    public function __construct(LoggingService $loggingService)
+    public function __construct(LoggingService $loggingService, AuthService $authService)
     {
         $this->loggingService = $loggingService;
+        $this->authService = $authService;
     }
 
     public function login(Request $request, Response $response): Response
@@ -33,29 +37,19 @@ class AuthController
                 return $response;
             }
 
-            // Simulate authentication logic here
-            // In a real application, you would validate credentials against the database
-            $isValid = $this->validateCredentials($email, $password);
+            $loginDTO = new LoginRequestDTO($email, $password);
+            $result = $this->authService->login($loginDTO);
 
-            if ($isValid) {
-                $this->loggingService->logAuth('login', 'success', "User logged in: {$email}");
-                $response->setContent(json_encode([
-                    'success' => true,
-                    'message' => 'Login successful',
-                    'data' => ['user_id' => 'user123', 'email' => $email]
-                ]));
-            } else {
-                $this->loggingService->logAuth('login', 'failure', "Invalid credentials for: {$email}");
-                $response->setContent(json_encode([
-                    'success' => false,
-                    'message' => 'Invalid credentials',
-                    'data' => null
-                ]));
-                $response->setStatusCode(401);
-            }
-
+            $this->loggingService->logAuth('login', 'success', "User logged in: {$email}");
+            $response->setContent(json_encode([
+                'success' => true,
+                'message' => 'Login successful',
+                'data' => [
+                    'user' => $result['user'],
+                    'token' => $result['token'],
+                ]
+            ]));
             return $response;
-
         } catch (\Exception $e) {
             $this->loggingService->logAuth('login', 'failure', "Login error: " . $e->getMessage());
             $response->setContent(json_encode([
@@ -95,12 +89,5 @@ class AuthController
             $response->setStatusCode(500);
             return $response;
         }
-    }
-
-    private function validateCredentials(string $email, string $password): bool
-    {
-        // This is a placeholder - implement actual authentication logic
-        // For demo purposes, accept any email/password combination
-        return !empty($email) && !empty($password);
     }
 }
