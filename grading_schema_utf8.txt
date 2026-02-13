@@ -1,0 +1,8 @@
+Schema for grading_scheme:
+id              int(11)         NO         PRI                  
+grade           varchar(3)      NO                              
+grade_from      int(3)          NO                              
+grade_to        int(3)          NO                              
+remarks         varchar(20)     NO                              
+added_by        varchar(20)     NO                              
+added_on        datetime        NO                              

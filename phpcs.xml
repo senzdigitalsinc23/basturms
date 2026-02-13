@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<ruleset name="Custom Framework Standard">
+    <description>PSR-12 coding standard for the project.</description>
+    <rule ref="PSR12"/>
+
+    <file>App</file>
+    <file>Core</file>
+    <file>Database</file>
+    <file>Services</file>
+    <file>Support</file>
+    <file>Repositories</file>
+
+    <exclude-pattern>vendor/*</exclude-pattern>
+    <exclude-pattern>storage/*</exclude-pattern>
+
+    <arg name="colors"/>
+    <arg value="sp"/>
+</ruleset>

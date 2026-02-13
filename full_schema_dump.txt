@@ -1,0 +1,43 @@
+--- assignment_activities ---
+id | int(11) | NO | PRI |  | auto_increment
+activity_id | varchar(20) | NO | UNI |  | 
+act_name | varchar(100) | NO |  |  | 
+expected_per_term | int(3) | NO |  |  | 
+weight | int(3) | NO |  |  | 
+academic_year | varchar(10) | NO |  |  | 
+term | varchar(10) | NO |  |  | 
+added_by | varchar(20) | NO |  |  | 
+added_on | datetime | NO |  |  | 
+status | varchar(20) | NO |  | active | 
+
+--- activities ---
+id | int(11) | NO | PRI |  | auto_increment
+act_id | varchar(20) | NO | MUL |  | 
+activity_name | varchar(100) | NO |  |  | 
+sub_activity_id | varchar(20) | NO | UNI |  | 
+status | varchar(20) | NO |  | active | 
+added_on | datetime | NO |  |  | 
+
+--- scores ---
+id | int(11) | NO | PRI |  | auto_increment
+student_no | varchar(20) | NO | MUL |  | 
+subject_id | int(11) | NO | MUL |  | 
+activity_id | int(11) | NO | MUL |  | 
+class_id | int(11) | NO | MUL |  | 
+academic_year | varchar(9) | NO | MUL |  | 
+term | varchar(20) | NO |  |  | 
+score | decimal(5,2) | NO |  | 0.00 | 
+entered_by | varchar(20) | NO |  |  | 
+entered_on | datetime | NO |  |  | 
+
+--- summary_student_report ---
+id | int(11) | NO | PRI |  | auto_increment
+student_no | varchar(50) | NO | MUL |  | 
+subject_id | int(11) | NO | MUL |  | 
+class_id | int(11) | NO | MUL |  | 
+activity_id | int(11) | NO |  |  | 
+score | decimal(5,2) | NO |  |  | 
+academic_year | varchar(15) | NO | MUL |  | 
+term | varchar(20) | NO |  |  | 
+entered_on | datetime | YES |  | current_timestamp() | 
+

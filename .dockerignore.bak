@@ -1,0 +1,11 @@
+.git
+.idea
+.vscode
+node_modules
+vendor
+Dockerfile
+docker-compose.yml
+*.md
+.env
+# Keep important docker config files
+!docker/php/*.ini

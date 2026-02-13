@@ -1,0 +1,41 @@
+--- class_activity_assignment ---
+Array
+(
+    [Table] => class_activity_assignment
+    [Create Table] => CREATE TABLE `class_activity_assignment` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `class_id` varchar(10) NOT NULL,
+  `act_id` varchar(20) NOT NULL,
+  `status` varchar(20) NOT NULL DEFAULT 'active',
+  `academic_year` varchar(10) NOT NULL,
+  `term` varchar(10) NOT NULL,
+  `assigned_by` varchar(20) NOT NULL,
+  `assigned_on` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `class_id` (`class_id`),
+  KEY `act_id` (`act_id`),
+  CONSTRAINT `class_activity_assignment_ibfk_1` FOREIGN KEY (`class_id`) REFERENCES `classes` (`class_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `class_activity_assignment_ibfk_2` FOREIGN KEY (`act_id`) REFERENCES `activities` (`sub_activity_id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=22 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+)
+
+--- activities ---
+Array
+(
+    [Table] => activities
+    [Create Table] => CREATE TABLE `activities` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `act_id` varchar(20) NOT NULL,
+  `activity_name` varchar(100) NOT NULL,
+  `sub_activity_id` varchar(20) NOT NULL,
+  `status` varchar(20) NOT NULL DEFAULT 'active',
+  `added_on` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `sub_act_id` (`sub_activity_id`),
+  KEY `act_id` (`act_id`),
+  CONSTRAINT `activities_ibfk_1` FOREIGN KEY (`act_id`) REFERENCES `assignment_activities` (`activity_id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=48 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+)
+
+--- check act_id ---
+Activity with sub_activity_id = ACT01169CB6 NOT FOUND

@@ -1,0 +1,12 @@
+[44;97m INFO [0m Starting queue worker...
+[44;97m INFO [0m Processing job ID: 241 (Jobs\SummarizeScoresJob)
+Starting score summarization for 2025/2026 - Term 1...
+Found 22 summary records to process.
+Successfully updated 22 summary records.
+[42;97m SUCCESS [0m Job ID: 241 processed successfully.
+[44;97m INFO [0m Processing job ID: 242 (Jobs\GenerateStudentReportJob)
+Starting student report generation for 2025/2026 - Term 1...
+Found 22 student-subject combinations to process.
+Successfully updated 22 student report records.
+[42;97m SUCCESS [0m Job ID: 242 processed successfully.
+[44;97m INFO [0m No jobs found. Exiting.

@@ -1,0 +1,50 @@
+# syntax=docker/dockerfile:1.7
+
+FROM php:8.2-fpm-alpine AS base
+
+# System deps
+RUN apk add --no-cache \
+    bash git curl icu-data-full icu tzdata \
+    libpng libjpeg-turbo libwebp freetype \
+    libzip \
+    oniguruma \
+    && apk add --no-cache --virtual .build-deps \
+       $PHPIZE_DEPS icu-dev libzip-dev oniguruma-dev \
+       freetype-dev libpng-dev libjpeg-turbo-dev libwebp-dev \
+    && docker-php-ext-configure intl \
+    && docker-php-ext-install -j$(nproc) intl zip pdo pdo_mysql \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
+    && docker-php-ext-install -j$(nproc) gd \
+    && pecl install apcu \
+    && docker-php-ext-enable apcu \
+    && apk del .build-deps
+
+# Opcache for prod-ish performance
+RUN docker-php-ext-install opcache
+
+# Composer (official image copy)
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+WORKDIR /var/www
+
+# Copy app files (no vendor)
+COPY . /var/www
+
+# Install PHP deps without dev (adjust for dev below)
+RUN composer install --no-dev --prefer-dist --no-interaction --no-progress --optimize-autoloader || \
+    (composer clear-cache && composer install --no-dev --prefer-dist --no-interaction --no-progress --optimize-autoloader)
+
+# PHP config
+COPY docker/php/php.ini /usr/local/etc/php/conf.d/99-app.ini
+COPY docker/php/opcache.ini /usr/local/etc/php/conf.d/10-opcache.ini
+
+# Ensure storage is writable
+RUN mkdir -p storage/{logs,cache,uploads} && chown -R www-data:www-data storage
+
+# ---- Dev variant with Xdebug (optional) ----
+FROM base AS dev
+RUN pecl install xdebug && docker-php-ext-enable xdebug
+COPY docker/php/xdebug.ini /usr/local/etc/php/conf.d/20-xdebug.ini
+
+# Default command
+CMD ["php-fpm", "-F"]
