@@ -112,5 +112,11 @@ class GenerateStudentReportJob
         }
 
         echo "Successfully updated {$count} student report records.\n";
+
+        // Compute subject and class rankings now that report scores are finalised
+        \App\Core\Queue::dispatch(\Jobs\ComputeRankingsJob::class, [
+            'academicYear' => $academicYear,
+            'term'         => $term,
+        ]);
     }
 }

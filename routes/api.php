@@ -6,6 +6,7 @@ use App\Controllers\Api\v1\AuthController;
 use App\Controllers\Api\v1\StudentController;
 use App\Controllers\Api\v1\PromotionController;
 use App\Controllers\Api\v1\AcademicController;
+use App\Controllers\Api\v1\RankingController;
 use App\Controllers\Api\v1\CsrfController;
 use App\Controllers\Api\v1\PromotionCriteriaController;
 use App\Controllers\TestController;
@@ -110,6 +111,13 @@ $router->postApi('v1', '/academic/scores/bulk', [AcademicController::class, 'bul
 $router->postApi('v1', '/academic/scores/upload', [AcademicController::class, 'uploadScoresCSV'], [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class]);
 $router->postApi('v1', '/academic/scores/summary/list', [AcademicController::class, 'getSummaryReports'], [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class]);
 $router->postApi('v1', '/academic/scores/report/list', [AcademicController::class, 'getStudentReports'], [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class]);
+
+// v1 Rankings
+$router->postApi('v1', '/academic/rankings/subjects', [RankingController::class, 'subjectRankings'], [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class]);
+$router->postApi('v1', '/academic/rankings/class',    [RankingController::class, 'classRankings'],   [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class]);
+$router->postApi('v1', '/academic/rankings/level',    [RankingController::class, 'levelRankings'],   [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class]);
+$router->postApi('v1', '/academic/rankings/school',   [RankingController::class, 'schoolRankings'],  [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class]);
+$router->postApi('v1', '/academic/rankings/student',  [RankingController::class, 'studentRanking'],  [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class]);
 
 $router->postApi('v1', '/academic/activities/create', [AcademicController::class, 'createAssignmentActivity'], [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class]);
 $router->postApi('v1', '/academic/activities/update', [AcademicController::class, 'updateAssignmentActivity'], [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class]);

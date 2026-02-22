@@ -1,0 +1,2 @@
+[2026-02-21 15:32:47] [CLI] ERROR: Database connection failed: SQLSTATE[HY000] [1045] Access denied for user 'root'@'localhost' (using password: NO) 
+[2026-02-21 15:40:00] [CLI] ERROR: Database connection failed: SQLSTATE[HY000] [1045] Access denied for user 'root'@'localhost' (using password: NO) 
