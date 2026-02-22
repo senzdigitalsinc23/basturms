@@ -1,1 +1,0 @@
-id, student_no, subject_id, academic_year, term, class_id, sba_raw_score, sba_50%, exam_raw_score, exam_50%, total_score_100%, grade, remarks, entered_by, entered_on

@@ -1,3 +1,15 @@
 /vendor/
 /.env
 /docker-compose.yaml
+# Logs
+/storage/logs/*.log
+/storage/logs/*.log.*
+*.log
+*.txt
+
+# Debug files
+/tools/debug/*.php
+
+# Temporary files
+*.bak
+*.tmp

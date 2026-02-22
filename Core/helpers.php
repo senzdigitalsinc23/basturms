@@ -369,3 +369,87 @@ if (!function_exists('to_date')) {
         return $dt->format($format);
     }
 }
+
+/**
+ * Get logger instance
+ *
+ * @return \App\Core\Logger
+ */
+function logger(): \App\Core\Logger
+{
+    return \App\Core\LoggerFactory::getInstance();
+}
+
+/**
+ * Log info message
+ *
+ * @param string $message
+ * @param array $context
+ * @return void
+ */
+function log_info(string $message, array $context = []): void
+{
+    logger()->info($message, $context);
+}
+
+/**
+ * Log error message
+ *
+ * @param string $message
+ * @param array $context
+ * @return void
+ */
+function log_error(string $message, array $context = []): void
+{
+    logger()->error($message, $context);
+}
+
+/**
+ * Log warning message
+ *
+ * @param string $message
+ * @param array $context
+ * @return void
+ */
+function log_warning(string $message, array $context = []): void
+{
+    logger()->warning($message, $context);
+}
+
+/**
+ * Log debug message
+ *
+ * @param string $message
+ * @param array $context
+ * @return void
+ */
+function log_debug(string $message, array $context = []): void
+{
+    logger()->debug($message, $context);
+}
+
+/**
+ * Log performance metrics
+ *
+ * @param string $operation
+ * @param float $duration Duration in milliseconds
+ * @param array $context
+ * @return void
+ */
+function log_performance(string $operation, float $duration, array $context = []): void
+{
+    logger()->logPerformance($operation, $duration, $context);
+}
+
+/**
+ * Log security event
+ *
+ * @param string $event
+ * @param string $message
+ * @param array $context
+ * @return void
+ */
+function log_security(string $event, string $message, array $context = []): void
+{
+    logger()->logSecurity($event, $message, $context);
+}

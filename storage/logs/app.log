@@ -1,1 +1,7 @@
 ﻿TEST: Direct file write test
+[2026-02-22 21:36:06] WARNING: This is a test warning | Context: {"test":true}
+[2026-02-22 21:36:06] ERROR: This is a test error | Context: {"error_code":"TEST_001"}
+[2026-02-22 21:36:06] WARNING: SECURITY: Failed login attempt | Context: {"username":"test_user","event_type":"login_attempt","timestamp":1771796166,"ip":"N/A","user_agent":"N/A"}
+[2026-02-22 21:36:39] WARNING: This is a test warning | Context: {"test":true}
+[2026-02-22 21:36:39] ERROR: This is a test error | Context: {"error_code":"TEST_001"}
+[2026-02-22 21:36:39] WARNING: SECURITY: Failed login attempt | Context: {"username":"test_user","event_type":"login_attempt","timestamp":1771796199,"ip":"N/A","user_agent":"N/A"}
