@@ -88,7 +88,7 @@ class AcademicController
      *
      * @return string The user ID or 'system' if not available
      */
-    private function getUserId(): string
+    private function getUserId(): string 
     {
         $user = Session::get('user');
         if (is_array($user) && isset($user['user_id'])) {
@@ -109,7 +109,6 @@ class AcademicController
     {
         $user = Session::get('user');
 
-        //echo json_encode($user);exit;
         if (is_array($user) && isset($user['role'])) {
             return $user['role'];
         }
@@ -1246,8 +1245,6 @@ class AcademicController
         try {
             $data = $request->getPost();
 
-            //echo json_encode($data);exit;
-
             if ($request->getMethod() === 'GET') {
                 $result = $this->classSubjectService->getClassSubjects(0);
             }else {
@@ -1412,7 +1409,7 @@ class AcademicController
     {
         try {
             $data = $request->getPost();
-//echo json_encode($data);exit;
+
             $result = $this->studentScoreService->getStudentScores(
                 ($data['student_no'] ?? ''),
                 $data['academic_year'] ?? null,
@@ -1620,8 +1617,6 @@ class AcademicController
         try {
             $data = (array)$request->getPost();
             $userId = $this->getUserId();
-
-            //echo json_encode($data);exit;
 
             $result = $this->assignmentActivityService->createActivity($data, $userId);
 
@@ -1949,7 +1944,7 @@ class AcademicController
             $userId = $this->getUserId();
 
             $classId = is_numeric($classId) ? ClassActivityAssignment::where('id', $classId, 'classes')->class_id : $classId;
-//echo json_encode($actId);exit;
+
             $result = $this->classActivityAssignmentService->unassignActivity($classId, $actId);
 
             $this->loggingService->logAudit('class_activity_assignment', "Activity {$actId} unassigned from class {$classId}", $userId);
@@ -2321,7 +2316,9 @@ class AcademicController
                 properties: [
                     new OA\Property(property: "student_no", type: "string"),
                     new OA\Property(property: "academic_year", type: "string"),
-                    new OA\Property(property: "term", type: "string")
+                    new OA\Property(property: "term", type: "string"),
+                    new OA\Property(property: "class_id", type: "integer"),
+                    new OA\Property(property: "search", type: "string", description: "Search by student name or student number")
                 ]
             )
         ),
@@ -2338,8 +2335,9 @@ class AcademicController
             $academicYear = $data['academic_year'] ?? Session::get('user')['academic_year'];
             $term = $data['term'] ?? Session::get('user')['term'];
             $class_id = $data['class_id'] ?? null;
+            $search = $data['search'] ?? null;
 
-            $result = $this->studentScoreService->getStudentReports($studentNo, $academicYear, $term, $class_id);
+            $result = $this->studentScoreService->getStudentReports($studentNo, $academicYear, $term, $class_id, $search);
             
             $response->setContent(json_encode($result));
             return $response;

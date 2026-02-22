@@ -23,12 +23,22 @@ class AuthService
     /**
      * @param UserRepository $userRepository
      * @param AcademicSetupService $academicSetupService
+     * @throws \RuntimeException If JWT_SECRET is not configured
      */
     public function __construct(UserRepository $userRepository, AcademicSetupService $academicSetupService)
     {
         $this->userRepository = $userRepository;
         $this->academicSetupService = $academicSetupService;
-        $this->jwtSecret = $_ENV['JWT_SECRET'] ?? 'your-secret-key-change-this';
+        
+        // SECURITY: Never use default JWT secrets - enforce configuration
+        if (empty($_ENV['JWT_SECRET'])) {
+            throw new \RuntimeException(
+                'JWT_SECRET environment variable is not configured. ' .
+                'Please set a strong secret key in your .env file.'
+            );
+        }
+        
+        $this->jwtSecret = $_ENV['JWT_SECRET'];
     }
 
     /**
@@ -86,8 +96,6 @@ class AuthService
             throw AuthException::invalidCredentials();
         }
 
-        //echo json_encode($user); exit;
-
         // Check if account is locked
         $lockoutStatus = $this->checkAccountLockout($user->email);
         if ($lockoutStatus['locked']) {
@@ -98,7 +106,6 @@ class AuthService
 
         // Verify password
         if (empty($user->password) || !password_verify($loginData->password, $user->password)) {
-            //echo json_encode($user); exit;
             // Record failed attempt and potentially lock account
             $this->recordFailedAttempt($user->email);
             throw AuthException::invalidCredentials();
@@ -342,7 +349,6 @@ class AuthService
     {
         $user = $this->userRepository->findByEmail($email);
 
-        //echo json_encode($user);exit;
         if (!$user) {
             return ['locked' => false, 'minutes_remaining' => 0];
         }
@@ -384,11 +390,9 @@ class AuthService
         $maxAttempts = 5; // Could be moved to config
         $lockoutDuration = 30; // minutes
 
-        //echo json_encode($attempts); exit;
         if ($attempts >= $maxAttempts) {
             // Lock the account
             $this->lockAccount($email, $lockoutDuration);
-            //echo json_encode($attempts); exit;
         } else {
             // Just increment the counter
             $this->userRepository->updateFailedAttempts($user->id, $attempts);
@@ -501,15 +505,17 @@ class AuthService
                 throw new AuthException('Email service returned false - check SMTP configuration');
             }
         } catch (\Exception $e) {
-            // Email failed - log the password for development/testing
-            error_log("=== PASSWORD RESET FOR {$email} ===");
-            error_log("New Password: {$newPassword}");
-            error_log("Email send failed: " . $e->getMessage());
-            error_log("Password has been updated in database. User can use the new password to login.");
+            // SECURITY: Never log passwords - even in development
+            error_log("Password reset email failed for user: {$email}");
+            error_log("Email send error: " . $e->getMessage());
             
-            // In development, continue without email
-            // In production, you should throw the exception
-            // throw $e;
+            // In production, throw the exception to prevent silent failures
+            if (($_ENV['APP_ENV'] ?? 'production') === 'production') {
+                throw new AuthException('Failed to send password reset email. Please contact support.');
+            }
+            
+            // In development, allow continuation but warn
+            error_log("WARNING: Password reset completed but email not sent. User must contact admin.");
         }
 
         return [
@@ -527,58 +533,9 @@ class AuthService
      */
     private function buildPasswordResetEmail(string $username, string $newPassword): string
     {
-        $appName = $_ENV['APP_NAME'] ?? 'BASTURMS';
-        
-        return "
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <style>
-                    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-                    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                    .header { background-color: #4CAF50; color: white; padding: 20px; text-align: center; }
-                    .content { background-color: #f9f9f9; padding: 30px; border: 1px solid #ddd; }
-                    .password-box { background-color: #fff; border: 2px solid #4CAF50; padding: 15px; margin: 20px 0; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 2px; }
-                    .warning { background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; }
-                    .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
-                </style>
-            </head>
-            <body>
-                <div class='container'>
-                    <div class='header'>
-                        <h1>Password Reset Request</h1>
-                    </div>
-                    <div class='content'>
-                        <p>Hello <strong>{$username}</strong>,</p>
-                        
-                        <p>You have requested a password reset for your {$appName} account.</p>
-                        
-                        <p>Your new temporary password is:</p>
-                        
-                        <div class='password-box'>
-                            {$newPassword}
-                        </div>
-                        
-                        <div class='warning'>
-                            <strong>⚠️ Important Security Notice:</strong>
-                            <ul>
-                                <li>Please login with this password and change it immediately</li>
-                                <li>Do not share this password with anyone</li>
-                                <li>If you did not request this password reset, please contact support immediately</li>
-                            </ul>
-                        </div>
-                        
-                        <p>For security reasons, we recommend changing this temporary password as soon as you log in.</p>
-                        
-                        <p>Best regards,<br>
-                        The {$appName} Team</p>
-                    </div>
-                    <div class='footer'>
-                        <p>This is an automated message. Please do not reply to this email.</p>
-                    </div>
-                </div>
-            </body>
-            </html>
-        ";
+        return \App\Templates\Email\PasswordReset::generate([
+            'username' => $username,
+            'new_password' => $newPassword
+        ]);
     }
 }

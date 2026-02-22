@@ -86,7 +86,6 @@ class ClassActivityAssignmentService
      */
     public function unassignActivity(string $classId, string $actId): array
     {
-        //echo json_encode($actId);exit;
         $db = Database::getInstance()->getConnection();
         $stmt = $db->prepare("DELETE FROM class_activity_assignment WHERE class_id = ? AND act_id = ?");
         $stmt->execute([$classId, $actId]);
@@ -109,7 +108,6 @@ class ClassActivityAssignmentService
      */
     public function listClassActivities(string $classId): array
     {
-        //echo json_encode($classId);exit;
         $db = Database::getInstance()->getConnection();
         $stmt = $db->prepare("
             SELECT aa.*, ca.assigned_on, ca.assigned_by
@@ -128,7 +126,6 @@ class ClassActivityAssignmentService
 
     public function listIndividualClassActivities(string $classId): array
     {
-        //echo json_encode($classId);exit;
         $db = Database::getInstance()->getConnection();
         $stmt = $db->prepare("
             SELECT aa.*, ca.assigned_on, ca.assigned_by

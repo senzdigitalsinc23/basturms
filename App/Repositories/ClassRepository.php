@@ -13,10 +13,14 @@ class ClassRepository
     private Cache $cache;
     private const CACHE_TTL = 3600; // 1 hour
 
-    public function __construct()
+    /**
+     * @param PDO|null $db Optional database connection (defaults to singleton)
+     * @param Cache|null $cache Optional cache instance (defaults to new instance)
+     */
+    public function __construct(?PDO $db = null, ?Cache $cache = null)
     {
-        $this->db = Database::getInstance()->getConnection();
-        $this->cache = new Cache();
+        $this->db = $db ?? Database::getInstance()->getConnection();
+        $this->cache = $cache ?? new Cache();
     }
 
     public function create(string $classId, string $className, ?string $levelId = null): array
@@ -138,6 +142,31 @@ class ClassRepository
         $stmt = $this->db->prepare($sql);
         $stmt->execute([':class_id' => $id]);
         return (bool) $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Batch check if classes exist (optimized for bulk operations)
+     * 
+     * @param array $ids Array of class IDs
+     * @return array Map of class_id => true (only existing classes)
+     */
+    public function existsBatch(array $ids): array
+    {
+        if (empty($ids)) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $sql = "SELECT id FROM classes WHERE id IN ($placeholders)";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($ids);
+        
+        $result = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $result[$row['id']] = true;
+        }
+        
+        return $result;
     }
 
     private function clearCache(): void

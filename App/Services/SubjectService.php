@@ -11,9 +11,12 @@ class SubjectService
 {
     private SubjectRepository $repo;
 
-    public function __construct()
+    /**
+     * @param SubjectRepository|null $repo Optional repository instance (defaults to new instance)
+     */
+    public function __construct(?SubjectRepository $repo = null)
     {
-        $this->repo = new SubjectRepository();
+        $this->repo = $repo ?? new SubjectRepository();
     }
 
     /**

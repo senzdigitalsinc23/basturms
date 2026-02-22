@@ -19,10 +19,14 @@ class StudentRepository
     private const CACHE_TTL = 3600; // 1 hour
     private const SHORT_CACHE_TTL = 300; // 5 minutes for counts
 
-    public function __construct()
+    /**
+     * @param PDO|null $db Optional database connection (defaults to singleton)
+     * @param Cache|null $cache Optional cache instance (defaults to new instance)
+     */
+    public function __construct(?PDO $db = null, ?Cache $cache = null)
     {
-        $this->db = Database::getInstance()->getConnection();
-        $this->cache = new Cache();
+        $this->db = $db ?? Database::getInstance()->getConnection();
+        $this->cache = $cache ?? new Cache();
     }
 
     public function createStudent(StudentDTO $student): bool

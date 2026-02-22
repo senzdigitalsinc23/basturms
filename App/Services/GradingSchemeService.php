@@ -177,7 +177,7 @@ class GradingSchemeService
     {
         
         $grading = GradingScheme::where('grade', $id, 'grading_scheme');
-        //echo json_encode($grading);exit;
+
         if (!$grading) {
             throw new ValidationException(['id' => ['Grading entry not found']], 'Validation failed');
         }

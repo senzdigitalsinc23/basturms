@@ -252,7 +252,6 @@ class StudentScoreRepository
             ':u_entered_by' => $enteredBy,
         ]);
 
-        //echo json_encode('new');exit;
         return [
             'success' => true,
             'student_no' => $studentNo,
@@ -366,7 +365,7 @@ class StudentScoreRepository
      * @param string|null $term
      * @return array
      */
-    public function getStudentReports(?string $studentNo = null, ?string $academicYear = null, ?string $term = null, ?int $classId = null): array
+    public function getStudentReports(?string $studentNo = null, ?string $academicYear = null, ?string $term = null, ?int $classId = null, ?string $search = null): array
     {
         $sql = "
             SELECT 
@@ -401,6 +400,19 @@ class StudentScoreRepository
         if (!empty($classId)) {
             $sql .= " AND sr.class_id = :class_id";
             $params[':class_id'] = $classId;
+        }
+
+        if (!empty($search)) {
+            $sql .= " AND (
+                s.first_name LIKE :search1 OR 
+                s.last_name LIKE :search2 OR 
+                s.other_name LIKE :search3 OR 
+                s.student_no LIKE :search4
+            )";
+            $params[':search1'] = "%$search%";
+            $params[':search2'] = "%$search%";
+            $params[':search3'] = "%$search%";
+            $params[':search4'] = "%$search%";
         }
         
         $sql .= " ORDER BY sr.academic_year DESC, sr.term DESC, s.last_name ASC, subj.subject_name ASC";

@@ -341,9 +341,9 @@ class StudentScoreService
      * @param string|null $term
      * @return array
      */
-    public function getStudentReports(?string $studentNo = null, ?string $academicYear = null, ?string $term = null, ?int $classId = null): array
+    public function getStudentReports(?string $studentNo = null, ?string $academicYear = null, ?string $term = null, ?int $classId = null, ?string $search = null): array
     {
-        $reports = $this->repo->getStudentReports($studentNo, $academicYear, $term, $classId);
+        $reports = $this->repo->getStudentReports($studentNo, $academicYear, $term, $classId, $search);
         
         return [
             'success' => true,

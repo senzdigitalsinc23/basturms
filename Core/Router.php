@@ -53,9 +53,15 @@ class Router
 
     protected function addRoute(string $method, string $uri, array $action, array $middleware = [], array $docs = []): void
     {
+        // Convert URI with placeholders like {id} to regex
+        // Example: /api/v1/uploads/file/{id} => #^/api/v1/uploads/file/(?P<id>[^/]+)$#
+        $regex = preg_replace('/\{([a-zA-Z0-9_]+)\}/', '(?P<$1>[^/]+)', $uri);
+        $regex = '#^' . $regex . '$#';
+
         $this->routes[] = [
             'method'     => $method,
             'uri'        => $uri,
+            'regex'      => $regex,
             'action'     => $action,
             'middleware' => $middleware,
             'docs'       => $docs
@@ -69,18 +75,30 @@ class Router
 
         // Find route
         $route = null;
+        $params = [];
+
         foreach ($this->routes as $r) {
-            if ($r['method'] === $method && $r['uri'] === $uri) {
-                $route = $r;
-                break;
+            if ($r['method'] === $method) {
+                if ($r['uri'] === $uri) {
+                    $route = $r;
+                    break;
+                } elseif (preg_match($r['regex'], $uri, $matches)) {
+                    $route = $r;
+                    // Extract named parameters from regex matches
+                    foreach ($matches as $key => $value) {
+                        if (is_string($key)) {
+                            $params[$key] = $value;
+                        }
+                    }
+                    break;
+                }
             }
         }
 
-        // For OPTIONS preflight requests, allow matching any route with the same URI
-        // This allows CORS middleware to handle the preflight request
+        // For OPTIONS preflight requests...
         if (!$route && $method === 'OPTIONS') {
             foreach ($this->routes as $r) {
-                if ($r['uri'] === $uri) {
+                if ($r['uri'] === $uri || preg_match($r['regex'], $uri)) {
                     $route = $r;
                     break;
                 }
@@ -96,10 +114,10 @@ class Router
         }
 
         // Build final controller callable
-        $controllerHandler = function(Request $req, Response $res) use ($route) {
+        $controllerHandler = function(Request $req, Response $res) use ($route, $params) {
             [$controllerClass, $action] = $route['action'];
             $controller = $this->container->resolve($controllerClass);
-            $result = $controller->$action($req, $res, []);
+            $result = $controller->$action($req, $res, $params);
 
             if (is_string($result)) {
                 $res->setContent($result);
@@ -113,7 +131,7 @@ class Router
             throw new Exception("Controller must return string or Response instance");
         };
 
-        // Combine global middleware with route-specific middleware (global first)
+        // Combine global middleware...
         $middlewares = array_merge($this->globalMiddleware, $route['middleware']);
         return $this->applyMiddleware($middlewares, $request, $response, $controllerHandler);
     }

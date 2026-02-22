@@ -226,7 +226,7 @@ function response()
 }
 
 if (!function_exists('session')) {
-    function session(string $key = null, mixed $default = null): mixed
+    function session(?string $key = null, mixed $default = null): mixed
     {
         if (is_null($key)) {
             return $_SESSION ?? [];

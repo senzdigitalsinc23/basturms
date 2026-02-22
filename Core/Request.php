@@ -11,12 +11,15 @@ class Request
     protected array $headers;
     protected array $bodyParams = [];
 
+    protected array $files;
+
     public function __construct()
     {
         $this->uri = $this->parseUri();
         $this->method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
         $this->get = $_GET;
         $this->post = $_POST;
+        $this->files = $_FILES;
         $this->headers = $this->getAllHeaders();
 
         $this->bodyParams = $this->detectBodyParams();
@@ -64,6 +67,15 @@ class Request
 
         if ($key === null) return $this->post;
         return $this->post[$key] ?? $default;
+    }
+
+    /**
+     * Get uploaded files
+     */
+    public function getFiles(string $key = null)
+    {
+        if ($key === null) return $this->files;
+        return $this->files[$key] ?? null;
     }
 
     /**

@@ -37,8 +37,13 @@ class ClassSubjectService
         $failedAssignments = [];
         $assignmentsToCommit = [];
 
+        // OPTIMIZATION: Batch check existence before loops
+        $existingClasses = $this->classRepo->existsBatch($classIds);
+        $existingSubjects = $this->subjectRepo->existsBatch($subjectIds);
+
         foreach ($classIds as $classId) {
-            if (!$this->classRepo->exists((int)$classId)) {
+            // Use pre-fetched data instead of querying in loop
+            if (!isset($existingClasses[$classId])) {
                 foreach ($subjectIds as $subjectId) {
                     $failedAssignments[] = [
                         'class_id' => $classId,
@@ -50,7 +55,8 @@ class ClassSubjectService
             }
 
             foreach ($subjectIds as $subjectId) {
-                if (!$this->subjectRepo->exists((int)$subjectId)) {
+                // Use pre-fetched data instead of querying in loop
+                if (!isset($existingSubjects[$subjectId])) {
                     $failedAssignments[] = [
                         'class_id' => $classId,
                         'subject_id' => $subjectId,

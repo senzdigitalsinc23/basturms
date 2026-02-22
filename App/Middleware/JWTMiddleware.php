@@ -13,10 +13,24 @@ class JWTMiddleware implements MiddlewareInterface
 {
     private string $secret;
 
+    /**
+     * @param string|null $secret JWT secret key
+     * @throws \RuntimeException If JWT_SECRET is not configured
+     */
     public function __construct(string $secret = null)
     {
-        // Fallback so it doesn't crash if env isn't wired yet
-        $this->secret = $secret ?? ($_ENV['JWT_SECRET'] ?? 'change_me');
+        // SECURITY: Never use default JWT secrets - enforce configuration
+        if ($secret === null) {
+            if (empty($_ENV['JWT_SECRET'])) {
+                throw new \RuntimeException(
+                    'JWT_SECRET environment variable is not configured. ' .
+                    'Please set a strong secret key in your .env file.'
+                );
+            }
+            $secret = $_ENV['JWT_SECRET'];
+        }
+        
+        $this->secret = $secret;
     }
 
     public function handle(Request $request, Response $response, callable $next): Response

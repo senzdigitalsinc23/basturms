@@ -40,6 +40,12 @@ abstract class Model
     public static function all($newTable = '')
     {
         $table = $newTable != '' ? $newTable : static::$table;
+        
+        // SECURITY: Validate table name to prevent SQL injection
+        if (!preg_match('/^[a-zA-Z0-9_]+$/', $table)) {
+            throw new \InvalidArgumentException('Invalid table name');
+        }
+        
         $db = Database::getInstance()->getConnection();
 
         $sql = "SELECT * FROM {$table}";
@@ -47,13 +53,18 @@ abstract class Model
         $stmt->execute();
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        //show($rows);
         return $rows;
     }
 
     public static function select($fields = [], $newTable = '')
     {
         $table = $newTable != '' ? $newTable : static::$table;
+        
+        // SECURITY: Validate table name to prevent SQL injection
+        if (!preg_match('/^[a-zA-Z0-9_]+$/', $table)) {
+            throw new \InvalidArgumentException('Invalid table name');
+        }
+        
         $db = Database::getInstance()->getConnection();
 
         $fields = implode(',',$fields);
@@ -63,7 +74,6 @@ abstract class Model
         $stmt->execute();
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        //show($rows);
         return $rows;
     }
 
@@ -83,6 +93,17 @@ abstract class Model
     public static function where(string $column, $value, $newTable = '')
     {        
         $table = $newTable != '' ? $newTable : static::$table;
+        
+        // SECURITY: Validate table name to prevent SQL injection
+        if (!preg_match('/^[a-zA-Z0-9_]+$/', $table)) {
+            throw new \InvalidArgumentException('Invalid table name');
+        }
+        
+        // SECURITY: Validate column name to prevent SQL injection
+        if (!preg_match('/^[a-zA-Z0-9_]+$/', $column)) {
+            throw new \InvalidArgumentException('Invalid column name');
+        }
+        
         $db = Database::getInstance()->getConnection();
 
         $sql = "SELECT * FROM {$table} WHERE {$column} = :value LIMIT 1";
@@ -96,6 +117,12 @@ abstract class Model
     public static function create(array $data, $newTable = "")
     {
         $table = $newTable != '' ? $newTable : static::$table;
+        
+        // SECURITY: Validate table name to prevent SQL injection
+        if (!preg_match('/^[a-zA-Z0-9_]+$/', $table)) {
+            throw new \InvalidArgumentException('Invalid table name');
+        }
+        
         $db = Database::getInstance()->getConnection();
 
         $columns = implode(",", array_keys($data));
@@ -105,8 +132,7 @@ abstract class Model
         $placeholders = ":" . $placeholders;        
 
         $sql = "INSERT INTO $table ($columns) VALUES ($placeholders)";
-//echo json_encode(['success' => false, 'errors' => $data]);exit;
-        //echo json_encode($placeholders);exit;
+        
         $stmt = $db->prepare($sql);
         $stmt->execute($data);
 
@@ -150,18 +176,32 @@ abstract class Model
 
         $table = static::$table;
         
-        $sql = "SELECT * FROM $table";
+        // SECURITY: Validate table name to prevent SQL injection
+        if (!preg_match('/^[a-zA-Z0-9_]+$/', $table)) {
+            throw new \InvalidArgumentException('Invalid table name');
+        }
+        
+        // SECURITY: Whitelist ORDER direction
+        $order = strtoupper($order);
+        if (!in_array($order, ['ASC', 'DESC'], true)) {
+            $order = 'ASC';
+        }
+        
+        $sql = "SELECT * FROM {$table}";
 
+        // Only add ORDER BY if column is specified
+        // Note: Child classes should override this method with column whitelisting
         if ($orderBy !== '') {
+            // Basic validation - alphanumeric and underscore only
+            if (!preg_match('/^[a-zA-Z0-9_]+$/', $orderBy)) {
+                throw new \InvalidArgumentException('Invalid ORDER BY column name');
+            }
             $sql .= " ORDER BY {$orderBy} {$order}";
         }
+        
         $sql .= " LIMIT :limit OFFSET :offset";
 
-
         $stmt = $db->prepare($sql);
-        //$stmt->execute();
-        //$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
         $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
         $stmt->bindValue(':offset', (int)$offset, PDO::PARAM_INT);
 

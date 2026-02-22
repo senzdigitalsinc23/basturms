@@ -32,6 +32,20 @@ if (file_exists($envFile) && is_readable($envFile)) {
     }
 }
 
+// Validate environment configuration
+try {
+    $validator = new \App\Core\EnvironmentValidator();
+    $validator->validateOrFail();
+} catch (\RuntimeException $e) {
+    // In production, show generic error
+    if (($_ENV['APP_ENV'] ?? 'production') === 'production') {
+        http_response_code(500);
+        die('Application configuration error. Please contact support.');
+    }
+    // In development, show detailed error
+    die($e->getMessage());
+}
+
 // Send secure HTTP headers
 \App\Middleware\SecureHeaders::send();
 
@@ -120,35 +134,100 @@ $container = new Container();
 
 $app_name = '';
 
+// Bind PDO (database connection)
+$container->singleton(\PDO::class, function($container) {
+    $host = $_ENV['DB_HOST'] ?? '127.0.0.1';
+    $dbname = $_ENV['DB_NAME'] ?? 'basturms_db';
+    $user = $_ENV['DB_USER'] ?? 'root';
+    $pass = $_ENV['DB_PASS'] ?? '';
+    
+    $dsn = "mysql:host=$host;dbname=$dbname;charset=utf8mb4";
+    
+    return new \PDO($dsn, $user, $pass, [
+        \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
+        \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,
+        \PDO::ATTR_EMULATE_PREPARES => false
+    ]);
+});
+
+// Bind Cache
+$container->singleton(\App\Core\Cache::class, fn($container) => new \App\Core\Cache());
+
 // Bind core services
 $container->singleton(Request::class, fn($container) => new Request());
 $container->singleton(Response::class, fn($container) => new Response());
 
 // Bind repositories
-$container->singleton(\App\Repositories\StudentRepository::class, fn($container) => new \App\Repositories\StudentRepository());
-$container->singleton(\App\Repositories\UserRepository::class, fn($container) => new \App\Repositories\UserRepository());
-$container->singleton(\App\Repositories\AcademicSetupRepository::class, fn($container) => new \App\Repositories\AcademicSetupRepository());
-$container->singleton(\App\Repositories\AcademicYearRepository::class, fn($container) => new \App\Repositories\AcademicYearRepository());
+$container->singleton(\App\Repositories\StudentRepository::class, fn($container) => 
+    new \App\Repositories\StudentRepository(
+        $container->resolve(\PDO::class),
+        $container->resolve(\App\Core\Cache::class)
+    )
+);
+$container->singleton(\App\Repositories\UserRepository::class, fn($container) => 
+    new \App\Repositories\UserRepository(
+        $container->resolve(\PDO::class),
+        $container->resolve(\App\Core\Cache::class)
+    )
+);
+$container->singleton(\App\Repositories\AcademicSetupRepository::class, fn($container) => 
+    new \App\Repositories\AcademicSetupRepository()
+);
+$container->singleton(\App\Repositories\AcademicYearRepository::class, fn($container) => 
+    new \App\Repositories\AcademicYearRepository(
+        $container->resolve(\PDO::class),
+        $container->resolve(\App\Core\Cache::class)
+    )
+);
+$container->singleton(\App\Repositories\SubjectRepository::class, fn($container) => 
+    new \App\Repositories\SubjectRepository(
+        $container->resolve(\PDO::class),
+        $container->resolve(\App\Core\Cache::class)
+    )
+);
+$container->singleton(\App\Repositories\ClassRepository::class, fn($container) => 
+    new \App\Repositories\ClassRepository(
+        $container->resolve(\PDO::class),
+        $container->resolve(\App\Core\Cache::class)
+    )
+);
 
 // Bind services
 $container->singleton(\App\Services\ValidationService::class, fn($container) => new \App\Services\ValidationService());
-$container->singleton(\App\Services\StudentService::class, fn($container) => new \App\Services\StudentService($container->resolve(\App\Repositories\StudentRepository::class)));
+$container->singleton(\App\Services\StudentService::class, fn($container) => 
+    new \App\Services\StudentService(
+        $container->resolve(\App\Repositories\StudentRepository::class)
+    )
+);
 $container->singleton(\App\Services\AuthValidationService::class, fn($container) => new \App\Services\AuthValidationService());
-$container->singleton(\App\Services\AcademicSetupService::class, fn($container) => new \App\Services\AcademicSetupService(
-    $container->resolve(\App\Repositories\AcademicSetupRepository::class),
-    $container->resolve(\App\Repositories\AcademicYearRepository::class),
-    $container->resolve(\App\Services\ValidationService::class)
-));
-$container->singleton(\App\Services\AuthService::class, fn($container) => new \App\Services\AuthService(
-    $container->resolve(\App\Repositories\UserRepository::class),
-    $container->resolve(\App\Services\AcademicSetupService::class)
-));
-$container->singleton(\App\Services\AdminService::class, fn($container) => new \App\Services\AdminService($container->resolve(\App\Repositories\UserRepository::class)));
-
-// Register Cache (singleton)
-$container->singleton(Cache::class, function ($container) {
-    return new Cache(__DIR__ . '/../storage/cache');
-});
+$container->singleton(\App\Services\AcademicSetupService::class, fn($container) => 
+    new \App\Services\AcademicSetupService(
+        $container->resolve(\App\Repositories\AcademicSetupRepository::class),
+        $container->resolve(\App\Repositories\AcademicYearRepository::class),
+        $container->resolve(\App\Services\ValidationService::class)
+    )
+);
+$container->singleton(\App\Services\AuthService::class, fn($container) => 
+    new \App\Services\AuthService(
+        $container->resolve(\App\Repositories\UserRepository::class),
+        $container->resolve(\App\Services\AcademicSetupService::class)
+    )
+);
+$container->singleton(\App\Services\AdminService::class, fn($container) => 
+    new \App\Services\AdminService(
+        $container->resolve(\App\Repositories\UserRepository::class)
+    )
+);
+$container->singleton(\App\Services\SubjectService::class, fn($container) => 
+    new \App\Services\SubjectService(
+        $container->resolve(\App\Repositories\SubjectRepository::class)
+    )
+);
+$container->singleton(\App\Services\ClassService::class, fn($container) => 
+    new \App\Services\ClassService(
+        $container->resolve(\App\Repositories\ClassRepository::class)
+    )
+);
 
 // Register Storage (singleton)
 $container->singleton(Storage::class, function ($container) {

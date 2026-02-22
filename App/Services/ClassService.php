@@ -11,9 +11,12 @@ class ClassService
 {
     private ClassRepository $repo;
 
-    public function __construct()
+    /**
+     * @param ClassRepository|null $repo Optional repository instance (defaults to new instance)
+     */
+    public function __construct(?ClassRepository $repo = null)
     {
-        $this->repo = new ClassRepository();
+        $this->repo = $repo ?? new ClassRepository();
     }
 
     /**

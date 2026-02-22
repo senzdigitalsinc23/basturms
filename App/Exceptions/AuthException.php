@@ -2,70 +2,136 @@
 
 namespace App\Exceptions;
 
-use Exception;
-
-class AuthException extends Exception
+/**
+ * Exception thrown for authentication and authorization errors
+ */
+class AuthException extends BaseException
 {
-    public function __construct(string $message = "Authentication error", int $code = 401, ?Exception $previous = null)
-    {
-        parent::__construct($message, $code, $previous);
+    protected int $statusCode = 401;
+    protected string $errorCode = 'AUTH_ERROR';
+
+    public function __construct(
+        string $message = "Authentication error",
+        ?int $statusCode = null,
+        ?string $errorCode = null,
+        array $context = [],
+        ?\Exception $previous = null
+    ) {
+        parent::__construct(
+            message: $message,
+            statusCode: $statusCode,
+            errorCode: $errorCode,
+            context: $context,
+            previous: $previous
+        );
     }
 
     public static function invalidCredentials(): self
     {
-        return new self("Invalid email or password", 401);
+        return new self(
+            message: "Invalid email or password",
+            statusCode: 401,
+            errorCode: 'INVALID_CREDENTIALS'
+        );
     }
 
     public static function emailAlreadyExists(string $email): self
     {
-        return new self("Email {$email} is already registered", 409);
+        return new self(
+            message: "Email {$email} is already registered",
+            statusCode: 409,
+            errorCode: 'EMAIL_ALREADY_EXISTS',
+            context: ['email' => $email]
+        );
     }
 
     public static function registrationFailed(): self
     {
-        return new self("User registration failed", 500);
+        return new self(
+            message: "User registration failed",
+            statusCode: 500,
+            errorCode: 'REGISTRATION_FAILED'
+        );
     }
 
     public static function accountInactive(): self
     {
-        return new self("Account is inactive. Please contact the administrator.", 403);
+        return new self(
+            message: "Account is inactive. Please contact the administrator.",
+            statusCode: 403,
+            errorCode: 'ACCOUNT_INACTIVE'
+        );
     }
 
     public static function userNotFound(): self
     {
-        return new self("User not found", 404);
+        return new self(
+            message: "User not found",
+            statusCode: 404,
+            errorCode: 'USER_NOT_FOUND'
+        );
     }
 
     public static function invalidCurrentPassword(): self
     {
-        return new self("Current password is incorrect", 400);
+        return new self(
+            message: "Current password is incorrect",
+            statusCode: 400,
+            errorCode: 'INVALID_CURRENT_PASSWORD'
+        );
     }
 
     public static function passwordUpdateFailed(): self
     {
-        return new self("Failed to update password", 500);
+        return new self(
+            message: "Failed to update password",
+            statusCode: 500,
+            errorCode: 'PASSWORD_UPDATE_FAILED'
+        );
     }
 
     public static function tokenExpired(): self
     {
-        return new self("Token has expired", 401);
+        return new self(
+            message: "Token has expired",
+            statusCode: 401,
+            errorCode: 'TOKEN_EXPIRED'
+        );
     }
 
     public static function invalidToken(): self
     {
-        return new self("Invalid token", 401);
+        return new self(
+            message: "Invalid token",
+            statusCode: 401,
+            errorCode: 'INVALID_TOKEN'
+        );
     }
 
     public static function unauthorized(): self
     {
-        return new self("Unauthorized access", 401);
+        return new self(
+            message: "Unauthorized access",
+            statusCode: 401,
+            errorCode: 'UNAUTHORIZED'
+        );
     }
 
     public static function accountLocked(?int $minutesRemaining = null): self
     {
         if ($minutesRemaining === null) {
-            return new self("Account is locked by administrator. Please contact support.", 423);
+            return new self(
+                message: "Account is locked by administrator. Please contact support.",
+                statusCode: 423,
+                errorCode: 'ACCOUNT_LOCKED'
+            );
         }
-        return new self("Account is temporarily locked due to multiple failed login attempts. Please try again in {$minutesRemaining} minutes or contact System Administrator for help.", 423);
+        
+        return new self(
+            message: "Account is temporarily locked due to multiple failed login attempts. Please try again in {$minutesRemaining} minutes or contact System Administrator for help.",
+            statusCode: 423,
+            errorCode: 'ACCOUNT_LOCKED_TEMPORARY',
+            context: ['minutes_remaining' => $minutesRemaining]
+        );
     }
 }

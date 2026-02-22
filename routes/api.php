@@ -1,6 +1,7 @@
 <?php
 
 use App\Controllers\Api\DocumentationController;
+use App\Controllers\Api\HealthController;
 use App\Controllers\Api\v1\AdminController;
 use App\Controllers\Api\v1\AuthController;
 use App\Controllers\Api\v1\StudentController;
@@ -9,6 +10,7 @@ use App\Controllers\Api\v1\AcademicController;
 use App\Controllers\Api\v1\RankingController;
 use App\Controllers\Api\v1\CsrfController;
 use App\Controllers\Api\v1\PromotionCriteriaController;
+use App\Controllers\Api\v1\UploadController;
 use App\Controllers\TestController;
 use App\Middleware\APIKeyMiddleware;
 use App\Middleware\AuthMiddleware;
@@ -31,6 +33,10 @@ $router->middleware([
     ContentTypeEnforcer::class,
     JsonBodyParser::class,
 ]);
+
+// Health check endpoints (no authentication required)
+$router->getApi('v1', '/health', [HealthController::class, 'check'], []);
+$router->getApi('v1', '/ping', [HealthController::class, 'ping'], []);
 
 // v1 Auth
 $router->getApi('v1', '/mdware/auth/csrf', [CsrfController::class, 'token'], [RateLimiter::class]);
@@ -127,6 +133,11 @@ $router->postApi('v1', '/academic/activities/activate', [AcademicController::cla
 $router->getApi('v1', '/academic/activities/list', [AcademicController::class, 'listAssignmentActivities'], [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class]);
 $router->postApi('v1', '/academic/activities/list', [AcademicController::class, 'listAssignmentActivities'], [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class]);
 $router->getApi('v1', '/academic/activities/list/inactive', [AcademicController::class, 'listInactiveAssignmentActivities'], [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class]);
+
+// v1 Uploads
+$router->postApi('v1', '/uploads', [UploadController::class, 'upload'], [APIKeyMiddleware::class, AuthMiddleware::class]);
+$router->getApi('v1', '/uploads/file/{id}', [UploadController::class, 'getFile'], [APIKeyMiddleware::class, AuthMiddleware::class]);
+
 
 $router->postApi('v1', '/academic/classes/activities/assign', [AcademicController::class, 'assignActivityToClass'], [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class]);
 $router->postApi('v1', '/academic/classes/activities/unassign', [AcademicController::class, 'unassignActivityFromClass'], [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class]);

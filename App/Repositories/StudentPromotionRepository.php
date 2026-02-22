@@ -11,6 +11,11 @@ class StudentPromotionRepository
     private PDO $db;
     private Logger $logger;
 
+    /**
+     * Initialize the student promotion repository
+     * 
+     * Sets up database connection and logger for tracking promotion operations.
+     */
     public function __construct()
     {
         $this->db = Database::getInstance()->getConnection();
@@ -30,9 +35,8 @@ class StudentPromotionRepository
      */
     public function resolveStudentNo(mixed $studentIdentifier): ?string
     {
-        //echo json_encode(is_array($studentIdentifier));exit;
         $studentIdentifier = is_array($studentIdentifier) ? (trim((string)($studentIdentifier)['student_no']) ?? (string)$studentIdentifier) : trim((string)$studentIdentifier);
-        //echo json_encode($studentIdentifier);exit;
+
         if (is_int($studentIdentifier) || ctype_digit((string)$studentIdentifier)) {
             $sql = "SELECT student_no FROM students WHERE id = :id LIMIT 1";
             $stmt = $this->db->prepare($sql);
@@ -47,6 +51,158 @@ class StudentPromotionRepository
         $stmt->execute(['student_no' => $studentIdentifier]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return $row ? $row['student_no'] : null;
+    }
+
+    /**
+     * Batch resolve student identifiers to student_no (optimized for bulk operations)
+     * 
+     * @param array $identifiers Array of student IDs or student_nos
+     * @return array Map of identifier => student_no
+     */
+    public function resolveStudentNosBatch(array $identifiers): array
+    {
+        if (empty($identifiers)) {
+            return [];
+        }
+
+        $result = [];
+        $numericIds = [];
+        $stringIds = [];
+
+        // Separate numeric IDs from string IDs
+        foreach ($identifiers as $identifier) {
+            $identifier = is_array($identifier) ? (trim((string)($identifier['student_no'] ?? $identifier)) ?? (string)$identifier) : trim((string)$identifier);
+            
+            if (is_int($identifier) || ctype_digit((string)$identifier)) {
+                $numericIds[] = (int)$identifier;
+            } else {
+                $stringIds[] = $identifier;
+            }
+        }
+
+        // Batch fetch by numeric IDs
+        if (!empty($numericIds)) {
+            $placeholders = implode(',', array_fill(0, count($numericIds), '?'));
+            $sql = "SELECT id, student_no FROM students WHERE id IN ($placeholders)";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($numericIds);
+            
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $result[$row['id']] = $row['student_no'];
+            }
+        }
+
+        // Batch fetch by student_no
+        if (!empty($stringIds)) {
+            $placeholders = implode(',', array_fill(0, count($stringIds), '?'));
+            $sql = "SELECT student_no FROM students WHERE student_no IN ($placeholders)";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($stringIds);
+            
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $result[$row['student_no']] = $row['student_no'];
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Batch check if students have been promoted this academic year
+     * 
+     * @param array $studentNos Array of student numbers
+     * @return array Map of student_no => bool (true if already promoted)
+     */
+    public function hasBeenPromotedBatch(array $studentNos): array
+    {
+        if (empty($studentNos)) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($studentNos), '?'));
+        $sql = "SELECT DISTINCT student_no 
+                FROM student_promotion 
+                WHERE student_no IN ($placeholders) 
+                AND academic_year = (SELECT academic_year FROM academic_years WHERE status = 'active' LIMIT 1)";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($studentNos);
+        
+        $promoted = array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'student_no', 'student_no');
+        
+        // Return map with all student_nos, marking promoted ones as true
+        $result = [];
+        foreach ($studentNos as $studentNo) {
+            $result[$studentNo] = isset($promoted[$studentNo]);
+        }
+        
+        return $result;
+    }
+
+    /**
+     * Batch get current classes for students
+     * 
+     * @param array $studentNos Array of student numbers
+     * @return array Map of student_no => class info
+     */
+    public function getStudentCurrentClassesBatch(array $studentNos): array
+    {
+        if (empty($studentNos)) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($studentNos), '?'));
+        $sql = "SELECT student_no, class_assigned 
+                FROM admission_details 
+                WHERE student_no IN ($placeholders)";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($studentNos);
+        
+        $result = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $result[$row['student_no']] = [
+                'class_assigned' => $row['class_assigned']
+            ];
+        }
+        
+        return $result;
+    }
+
+    /**
+     * Batch get next classes for promotion
+     * 
+     * @param array $classIds Array of current class IDs
+     * @return array Map of class_id => next class info
+     */
+    public function getNextClassesBatch(array $classIds): array
+    {
+        if (empty($classIds)) {
+            return [];
+        }
+
+        // Get all classes ordered by level
+        $sql = "SELECT c1.class_id as current_class_id, c2.id, c2.class_id, c2.class_name
+                FROM classes c1
+                LEFT JOIN classes c2 ON c2.id > c1.id
+                WHERE c1.class_id IN (" . implode(',', array_fill(0, count($classIds), '?')) . ")
+                GROUP BY c1.class_id
+                HAVING MIN(c2.id) IS NOT NULL
+                ORDER BY c1.id ASC";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($classIds);
+        
+        $result = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $result[$row['current_class_id']] = [
+                'id' => $row['id'],
+                'class_id' => $row['class_id'],
+                'class_name' => $row['class_name']
+            ];
+        }
+        
+        return $result;
     }
 
     /**
@@ -76,7 +232,6 @@ class StudentPromotionRepository
         $stmt = $this->db->prepare($sql);
         $stmt->execute(['id' => $classId]);
 
-        //echo json_encode($classId);exit;
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 
@@ -308,7 +463,6 @@ class StudentPromotionRepository
         $stmt->execute(['student_no' => $studentNo]);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        //echo json_encode($result);exit;
         return $result ?: null;
     }
 

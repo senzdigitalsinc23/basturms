@@ -73,7 +73,6 @@ class Student extends Model
         $stmt->execute();
         $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
-        //show($rows);
         return $rows;
     }
 
@@ -82,6 +81,24 @@ class Student extends Model
         $db = Database::getInstance()->getConnection();
 
         $table = static::$table;
+        
+        // SECURITY: Whitelist allowed ORDER BY columns to prevent SQL injection
+        $allowedOrderColumns = [
+            'student_no', 'first_name', 'last_name', 'other_name',
+            'phone', 'email', 'class_name', 'admission_status', 'class_assigned'
+        ];
+        
+        // Validate and sanitize ORDER BY column
+        if (!empty($orderBy) && !in_array($orderBy, $allowedOrderColumns, true)) {
+            // Default to safe column if invalid column provided
+            $orderBy = 'student_no';
+        }
+        
+        // Validate ORDER direction
+        $order = strtoupper($order);
+        if (!in_array($order, ['ASC', 'DESC'], true)) {
+            $order = 'ASC';
+        }
         
         $sql = "SELECT stu.student_no, stu.first_name, stu.last_name, stu.other_name, cont.phone, cont.email, adm.class_assigned, adm.id, adm.admission_status, cl.class_name
                 FROM students stu
@@ -93,14 +110,14 @@ class Student extends Model
                 ON adm.class_assigned = cl.class_id 
                 WHERE adm.admission_status = 'active'";       
 
-
-        $sql .= " ORDER BY {$orderBy} {$order} LIMIT :limit OFFSET :offset";
-
+        // Safe to use validated $orderBy and $order in query
+        if (!empty($orderBy)) {
+            $sql .= " ORDER BY {$orderBy} {$order}";
+        }
+        
+        $sql .= " LIMIT :limit OFFSET :offset";
 
         $stmt = $db->prepare($sql);
-        //$stmt->execute();
-        //$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
         $stmt->bindValue(':limit', (int)$limit, \PDO::PARAM_INT);
         $stmt->bindValue(':offset', (int)$offset, \PDO::PARAM_INT);
 
@@ -112,7 +129,22 @@ class Student extends Model
     public static function search($limit = 10, $offset = 0, $search = null, $status = 'active', $orderBy = '', $order = 'ASC') {
         $db = Database::getInstance()->getConnection();
 
-        //echo json_encode(['success' => true, 'message' => $status]);exit;
+        // SECURITY: Whitelist allowed ORDER BY columns to prevent SQL injection
+        $allowedOrderColumns = [
+            'student_no', 'first_name', 'last_name', 'other_name',
+            'phone', 'email', 'class_name', 'admission_status', 'class_assigned'
+        ];
+        
+        // Validate and sanitize ORDER BY column
+        if (!empty($orderBy) && !in_array($orderBy, $allowedOrderColumns, true)) {
+            $orderBy = 'student_no'; // Default to safe column
+        }
+        
+        // Validate ORDER direction
+        $order = strtoupper($order);
+        if (!in_array($order, ['ASC', 'DESC'], true)) {
+            $order = 'ASC';
+        }
 
         $sql = "SELECT stu.student_no, stu.first_name, stu.last_name, stu.other_name, cont.phone, cont.email, adm.id, adm.class_assigned, adm.admission_status, cl.class_name
                 FROM students stu
@@ -143,8 +175,12 @@ class Student extends Model
             $sql .= " WHERE adm.admission_status = :status";
         }
 
-        //
-        $sql .= " ORDER BY :orderBy :order LIMIT :limit OFFSET :offset";
+        // Safe to use validated $orderBy and $order in query
+        if (!empty($orderBy)) {
+            $sql .= " ORDER BY {$orderBy} {$order}";
+        }
+        
+        $sql .= " LIMIT :limit OFFSET :offset";
 
         $stmt = $db->prepare($sql);
 
@@ -154,9 +190,7 @@ class Student extends Model
 
         $stmt->bindValue(':limit', (int)$limit, \PDO::PARAM_INT);
         $stmt->bindValue(':offset', (int)$offset, \PDO::PARAM_INT);
-        $stmt->bindValue(':orderBy', $orderBy, \PDO::PARAM_STR);
-        $stmt->bindValue(':order', $order, \PDO::PARAM_STR);
-        $stmt->bindValue(':status', $status, \PDO::PARAM_STR);//echo json_encode(['success' => true, 'message' => $params]);exit;
+        $stmt->bindValue(':status', $status, \PDO::PARAM_STR);
 
         $stmt->execute();
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
@@ -172,8 +206,7 @@ class Student extends Model
         try {
             // soft delete
             $stmt = $db->prepare("UPDATE `admission_details` adm SET adm.`admission_status` = :admission_status WHERE adm.`id` = :id");
-//echo json_encode(['success' => true, 'message' => 'Student deleted successfully ' . $id]);exit;
-            //
+
             $stmt->bindValue(':id', $id, \PDO::PARAM_INT);
             $stmt->bindValue(':admission_status', $admission_status);
             $stmt->execute();
@@ -241,7 +274,6 @@ class Student extends Model
 
         $last_number = 0;
         $nextNo = 1;
-//echo json_encode(['success' => true, 'message' => 'Data imported successfully', 'data' => $row]);exit;
 
       if ($row) {
             $last_number = (int) substr($row['student_no'], -3);
@@ -253,7 +285,6 @@ class Student extends Model
         // Pad with leading zeros
         $studentNo = $prefix . str_pad($nextNo, 3, '0', STR_PAD_LEFT);
 
-        //echo json_encode(['success' => true, 'message' => 'Data imported successfully', 'data' => $studentNo]);exit;
         return $studentNo;
     }
     

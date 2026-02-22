@@ -16,11 +16,16 @@ class UserRepository
     private Logger $logger;
     private const CACHE_TTL = 3600; // 1 hour
 
-    public function __construct()
+    /**
+     * @param PDO|null $db Optional database connection (defaults to singleton)
+     * @param Cache|null $cache Optional cache instance (defaults to new instance)
+     * @param Logger|null $logger Optional logger instance (defaults to new instance)
+     */
+    public function __construct(?PDO $db = null, ?Cache $cache = null, ?Logger $logger = null)
     {
-        $this->db = Database::getInstance()->getConnection();
-        $this->cache = new Cache();
-        $this->logger = new Logger(__DIR__ . '/../../storage/logs');
+        $this->db = $db ?? Database::getInstance()->getConnection();
+        $this->cache = $cache ?? new Cache();
+        $this->logger = $logger ?? new Logger(__DIR__ . '/../../storage/logs');
     }
 
     public function create(array $userData): ?UserDTO
@@ -97,7 +102,7 @@ class UserRepository
         $stmt = $this->db->prepare($sql);
         $stmt->execute(['email' => $email]);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
-//echo json_encode($result);exit;
+
         $userDTO = $result ? UserDTO::fromArray($result) : null;
 
         // Temporarily disable cache setting
@@ -139,7 +144,7 @@ class UserRepository
         $stmt = $this->db->prepare($sql);
         $stmt->execute();
         $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
-//echo json_encode(['success' => true, 'message' => 'djdkjflskdjlkf']);exit;
+
         return array_map(fn($user) => UserDTO::fromArray($user), $results);
     }
 

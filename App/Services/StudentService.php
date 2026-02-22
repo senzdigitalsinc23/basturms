@@ -27,12 +27,17 @@ class StudentService
 
     /**
      * @param StudentRepository $studentRepository
+     * @param Database|null $database Optional database instance (defaults to singleton)
+     * @param Cache|null $cache Optional cache instance (defaults to new instance)
      */
-    public function __construct(StudentRepository $studentRepository)
-    {
+    public function __construct(
+        StudentRepository $studentRepository,
+        ?Database $database = null,
+        ?Cache $cache = null
+    ) {
         $this->studentRepository = $studentRepository;
-        $this->database = Database::getInstance();
-        $this->cache = new Cache();
+        $this->database = $database ?? Database::getInstance();
+        $this->cache = $cache ?? new Cache();
     }
 
     /**
@@ -128,15 +133,13 @@ class StudentService
                     ];
                 }
 
-                // Create user data
+                // Create user data with secure password
+                $securePassword = \App\Utils\PasswordGenerator::generate(12);
                 $userData = [
                     'user_id' => $studentNo,
                     'email' => $contact['email'] ?? (explode('-', $studentNo)[2] ?? $studentNo),
                     'username' => $contact['email'] ?? (explode('-', $studentNo)[2] ?? $studentNo),
-                    'password' => password_hash(
-                        ucfirst(($studentInfo['first_name'] ?? 'S')[0]) . ucfirst($studentInfo['last_name'] ?? 'tudent') . '123',
-                        PASSWORD_BCRYPT
-                    ),
+                    'password' => password_hash($securePassword, PASSWORD_BCRYPT),
                     'role_id' => '20',
                     'status' => 'inactive'
                 ];
@@ -158,6 +161,17 @@ class StudentService
                 
                 // Clear cache for the new student
                 $this->studentRepository->clearStudentCache($studentNo);
+
+                // Send welcome email with credentials
+                $this->sendStudentRegistrationEmail(
+                    $studentNo,
+                    $studentInfo['first_name'] ?? '',
+                    $studentInfo['last_name'] ?? '',
+                    $contact['email'] ?? null,
+                    $userData['username'],
+                    $securePassword,
+                    $admission['class_assigned'] ?? 'N/A'
+                );
 
                 // Build response DTOs for nested structure
                 $contactInfoDTO = ContactAddressInfoDTO::fromArray($contact);
@@ -200,15 +214,13 @@ class StudentService
             $contactDTO = StudentContactDTO::fromArray($data);
             $admissionDTO = AdmissionDTO::fromArray($data);
 
-            // Create user data
+            // Create user data with secure password
+            $securePassword = \App\Utils\PasswordGenerator::generate(12);
             $userData = [
                 'user_id' => $data['student_no'],
                 'email' => $data['email'] ?: explode('-', (string)$data['student_no'])[2],
                 'username' => $data['email'] ?: explode('-', (string)$data['student_no'])[2],
-                'password' => password_hash(
-                    ucfirst($data['first_name'][0]) . ucfirst($data['last_name']) . '123',
-                    PASSWORD_BCRYPT
-                ),
+                'password' => password_hash($securePassword, PASSWORD_BCRYPT),
                 'role_id' => '20',
                 'status' => 'inactive'
             ];
@@ -276,6 +288,17 @@ class StudentService
             }
 
             $db->commit();
+
+            // Send welcome email with credentials
+            $this->sendStudentRegistrationEmail(
+                $data['student_no'],
+                $data['first_name'],
+                $data['last_name'],
+                $data['email'] ?? null,
+                $userData['username'],
+                $securePassword,
+                $data['class_id'] ?? ($data['class_assigned'] ?? 'N/A')
+            );
 
             // Build response DTOs for legacy structure
             $contactInfoDTO = ContactAddressInfoDTO::fromArray($data);
@@ -814,7 +837,7 @@ class StudentService
     {
         return [
             'total' => count($studentsData),
-            'preview' => array_slice($studentsData, 0, 5), // Show first 5 rows
+            'preview' => array_slice($studentsData, 0, 5), // First 5 rows for preview
             'headers' => array_keys($studentsData[0] ?? [])
         ];
     }
@@ -898,6 +921,60 @@ class StudentService
                 'success' => false,
                 'message' => 'Error fetching class students: ' . $e->getMessage()
             ];
+        }
+    }
+
+    /**
+     * Send registration email to student with credentials
+     *
+     * @param string $studentNo Student number
+     * @param string $firstName First name
+     * @param string $lastName Last name
+     * @param string|null $email Email address
+     * @param string $username Username
+     * @param string $password Plain text password
+     * @param string $className Class name
+     * @return void
+     */
+    private function sendStudentRegistrationEmail(
+        string $studentNo,
+        string $firstName,
+        string $lastName,
+        ?string $email,
+        string $username,
+        string $password,
+        string $className
+    ): void {
+        // Only send email if email address is provided
+        if (empty($email)) {
+            error_log("No email provided for student {$studentNo}, skipping welcome email");
+            return;
+        }
+
+        try {
+            $emailService = new \Services\EmailService();
+            
+            $emailData = [
+                'student_name' => trim("{$firstName} {$lastName}"),
+                'student_no' => $studentNo,
+                'username' => $username,
+                'password' => $password,
+                'class_name' => $className
+            ];
+
+            $subject = 'Welcome to ' . ($_ENV['APP_NAME'] ?? 'BASTURMS') . ' - Your Account Details';
+            $htmlMessage = \App\Templates\Email\StudentRegistration::generate($emailData);
+            
+            $emailSent = $emailService->send($email, $htmlMessage, $subject);
+            
+            if ($emailSent) {
+                error_log("Welcome email sent successfully to {$email} for student {$studentNo}");
+            } else {
+                error_log("Failed to send welcome email to {$email} for student {$studentNo}");
+            }
+        } catch (\Exception $e) {
+            // Log error but don't fail student creation
+            error_log("Error sending welcome email for student {$studentNo}: " . $e->getMessage());
         }
     }
 }

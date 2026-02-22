@@ -3,6 +3,13 @@
 require_once 'vendor/autoload.php';
 
 use Database\Migrator;
+use Dotenv\Dotenv;
+
+// Load .env
+if (file_exists('.env')) {
+    $dotenv = Dotenv::createImmutable(__DIR__);
+    $dotenv->load();
+}
 
 // Define migrations path
 $migrationsPath = __DIR__ . DIRECTORY_SEPARATOR . 'Database' . DIRECTORY_SEPARATOR . 'migrations';
