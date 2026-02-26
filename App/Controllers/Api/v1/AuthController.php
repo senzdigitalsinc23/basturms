@@ -464,4 +464,378 @@ class AuthController extends Controller
             return $response;
         }
     }
+
+    /**
+     * Update user profile
+     *
+     * @param Request $request
+     * @param Response $response
+     * @return Response
+     */
+    #[OA\Put(
+        path: "/profile/update",
+        summary: "Update user profile",
+        description: "Updates the current user's profile information (username and email only). Use /auth/reset-password for password changes.",
+        tags: ["Authentication"],
+        security: [["bearerAuth" => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: "username", type: "string", example: "john_doe", description: "New username (optional)"),
+                    new OA\Property(property: "email", type: "string", format: "email", example: "john@example.com", description: "New email address (optional)")
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: "Profile updated successfully", content: new OA\JsonContent(properties: [
+                new OA\Property(property: "success", type: "boolean", example: true),
+                new OA\Property(property: "message", type: "string", example: "Profile updated successfully"),
+                new OA\Property(property: "data", type: "object", description: "Updated user profile")
+            ])),
+            new OA\Response(response: 400, description: "Validation error"),
+            new OA\Response(response: 401, description: "Unauthorized"),
+            new OA\Response(response: 409, description: "Username or email already exists"),
+            new OA\Response(response: 500, description: "Server error")
+        ]
+    )]
+    public function updateProfile(Request $request, Response $response): Response
+    {
+        try {
+            // Get current user from session
+            $currentUser = Session::get('user');
+            if (!$currentUser || !isset($currentUser['id'])) {
+                $response->setStatusCode(401);
+                $response->setHeader('Content-Type', 'application/json');
+                $response->setContent((string)json_encode([
+                    'success' => false,
+                    'message' => 'Unauthorized',
+                    'data' => null
+                ]));
+                return $response;
+            }
+
+            $userId = (int)$currentUser['id'];
+            $data = $request->getPost();
+
+            // Create DTO from request data
+            $profileUpdateDTO = \App\DTOs\ProfileUpdateDTO::fromArray($data);
+
+            // Initialize profile service
+            $profileService = new \App\Services\ProfileService();
+
+            // Validate permissions (user can update their own profile)
+            $profileService->validateUpdatePermissions($userId, $userId);
+
+            // Update profile
+            $updatedUser = $profileService->updateProfile($userId, $profileUpdateDTO);
+
+            $this->loggingService->logAuth('profile-update', 'success', "Profile updated for user: {$userId}", (string)$userId);
+
+            $response->setHeader('Content-Type', 'application/json');
+            $response->setContent((string)json_encode([
+                'success' => true,
+                'message' => 'Profile updated successfully',
+                'data' => $updatedUser
+            ]));
+            $response->setStatusCode(200);
+            return $response;
+
+        } catch (\App\Exceptions\ValidationException $e) {
+            $this->loggingService->logAuth('profile-update', 'failure', "Validation error: " . $e->getMessage(), (string)($currentUser['id'] ?? ''));
+            $response->setStatusCode(400);
+            $response->setHeader('Content-Type', 'application/json');
+            $response->setContent((string)json_encode([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $e->getErrors(),
+                'data' => null
+            ]));
+            return $response;
+
+        } catch (\App\Exceptions\AuthException $e) {
+            $this->loggingService->logAuth('profile-update', 'failure', "Auth error: " . $e->getMessage(), (string)($currentUser['id'] ?? ''));
+            $response->setStatusCode(401);
+            $response->setHeader('Content-Type', 'application/json');
+            $response->setContent((string)json_encode([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'data' => null
+            ]));
+            return $response;
+
+        } catch (\App\Exceptions\ConflictException $e) {
+            $this->loggingService->logAuth('profile-update', 'failure', "Conflict error: " . $e->getMessage(), (string)($currentUser['id'] ?? ''));
+            $response->setStatusCode(409);
+            $response->setHeader('Content-Type', 'application/json');
+            $response->setContent((string)json_encode([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'data' => null
+            ]));
+            return $response;
+
+        } catch (\Exception $e) {
+            $this->loggingService->logAuth('profile-update', 'failure', "Profile update error: " . $e->getMessage(), (string)($currentUser['id'] ?? ''));
+            $response->setStatusCode(500);
+            $response->setHeader('Content-Type', 'application/json');
+            $response->setContent((string)json_encode([
+                'success' => false,
+                'message' => 'An error occurred while updating profile',
+                'data' => null
+            ]));
+            return $response;
+        }
+    }
+
+    /**
+     * Get detailed user profile
+     *
+     * @param Request $request
+     * @param Response $response
+     * @return Response
+     */
+    #[OA\Get(
+        path: "/profile/details",
+        summary: "Get detailed user profile",
+        description: "Retrieves detailed profile information for the current user.",
+        tags: ["Authentication"],
+        security: [["bearerAuth" => []]],
+        responses: [
+            new OA\Response(response: 200, description: "Profile retrieved successfully", content: new OA\JsonContent(properties: [
+                new OA\Property(property: "success", type: "boolean", example: true),
+                new OA\Property(property: "message", type: "string", example: "Profile retrieved successfully"),
+                new OA\Property(property: "data", type: "object", description: "User profile data")
+            ])),
+            new OA\Response(response: 401, description: "Unauthorized"),
+            new OA\Response(response: 500, description: "Server error")
+        ]
+    )]
+    public function getProfileDetails(Request $request, Response $response): Response
+    {
+        try {
+            // Get current user from session
+            $currentUser = Session::get('user');
+            if (!$currentUser || !isset($currentUser['id'])) {
+                $response->setStatusCode(401);
+                $response->setHeader('Content-Type', 'application/json');
+                $response->setContent((string)json_encode([
+                    'success' => false,
+                    'message' => 'Unauthorized',
+                    'data' => null
+                ]));
+                return $response;
+            }
+
+            $userId = (int)$currentUser['id'];
+
+            // Initialize profile service
+            $profileService = new \App\Services\ProfileService();
+
+            // Get profile details
+            $profileData = $profileService->getProfile($userId);
+
+            $this->loggingService->logAuth('profile-details', 'success', "Profile details retrieved for user: {$userId}", (string)$userId);
+
+            $response->setHeader('Content-Type', 'application/json');
+            $response->setContent((string)json_encode([
+                'success' => true,
+                'message' => 'Profile retrieved successfully',
+                'data' => $profileData
+            ]));
+            $response->setStatusCode(200);
+            return $response;
+
+        } catch (\App\Exceptions\AuthException $e) {
+            $this->loggingService->logAuth('profile-details', 'failure', "Auth error: " . $e->getMessage(), (string)($currentUser['id'] ?? ''));
+            $response->setStatusCode(401);
+            $response->setHeader('Content-Type', 'application/json');
+            $response->setContent((string)json_encode([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'data' => null
+            ]));
+            return $response;
+
+        } catch (\Exception $e) {
+            $this->loggingService->logAuth('profile-details', 'failure', "Profile details error: " . $e->getMessage(), (string)($currentUser['id'] ?? ''));
+            $response->setStatusCode(500);
+            $response->setHeader('Content-Type', 'application/json');
+            $response->setContent((string)json_encode([
+                'success' => false,
+                'message' => 'An error occurred while retrieving profile',
+                'data' => null
+            ]));
+            return $response;
+        }
+    }
+
+    /**
+     * Update user profile image
+     *
+     * @param Request $request
+     * @param Response $response
+     * @return Response
+     */
+    #[OA\Put(
+        path: "/profile/image",
+        summary: "Update profile image",
+        description: "Updates the current user's profile image by providing an upload ID.",
+        tags: ["Authentication"],
+        security: [["bearerAuth" => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ["upload_id"],
+                properties: [
+                    new OA\Property(property: "upload_id", type: "integer", example: 123, description: "ID of the uploaded image from uploads table")
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: "Profile image updated successfully"),
+            new OA\Response(response: 400, description: "Invalid upload ID"),
+            new OA\Response(response: 401, description: "Unauthorized"),
+            new OA\Response(response: 500, description: "Server error")
+        ]
+    )]
+    public function updateProfileImage(Request $request, Response $response): Response
+    {
+        try {
+            // Get current user from session
+            $currentUser = Session::get('user');
+            if (!$currentUser || !isset($currentUser['id'])) {
+                $response->setStatusCode(401);
+                $response->setHeader('Content-Type', 'application/json');
+                $response->setContent((string)json_encode([
+                    'success' => false,
+                    'message' => 'Unauthorized',
+                    'data' => null
+                ]));
+                return $response;
+            }
+
+            $userId = (int)$currentUser['id'];
+            $data = $request->getPost();
+
+            if (!isset($data['upload_id']) || !is_numeric($data['upload_id'])) {
+                $response->setStatusCode(400);
+                $response->setHeader('Content-Type', 'application/json');
+                $response->setContent((string)json_encode([
+                    'success' => false,
+                    'message' => 'Upload ID is required and must be a number',
+                    'data' => null
+                ]));
+                return $response;
+            }
+
+            $uploadId = (int)$data['upload_id'];
+
+            // Initialize profile service
+            $profileService = new \App\Services\ProfileService();
+
+            // Update profile image
+            $updatedUser = $profileService->updateProfileImage($userId, $uploadId);
+
+            $this->loggingService->logAuth('profile-image-update', 'success', "Profile image updated for user: {$userId}", (string)$userId);
+
+            $response->setHeader('Content-Type', 'application/json');
+            $response->setContent((string)json_encode([
+                'success' => true,
+                'message' => 'Profile image updated successfully',
+                'data' => $updatedUser
+            ]));
+            $response->setStatusCode(200);
+            return $response;
+
+        } catch (\App\Exceptions\AuthException $e) {
+            $this->loggingService->logAuth('profile-image-update', 'failure', "Auth error: " . $e->getMessage(), (string)($currentUser['id'] ?? ''));
+            $response->setStatusCode(400);
+            $response->setHeader('Content-Type', 'application/json');
+            $response->setContent((string)json_encode([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'data' => null
+            ]));
+            return $response;
+
+        } catch (\Exception $e) {
+            $this->loggingService->logAuth('profile-image-update', 'failure', "Profile image update error: " . $e->getMessage(), (string)($currentUser['id'] ?? ''));
+            $response->setStatusCode(500);
+            $response->setHeader('Content-Type', 'application/json');
+            $response->setContent((string)json_encode([
+                'success' => false,
+                'message' => 'An error occurred while updating profile image',
+                'data' => null
+            ]));
+            return $response;
+        }
+    }
+
+    /**
+     * Remove user profile image
+     *
+     * @param Request $request
+     * @param Response $response
+     * @return Response
+     */
+    #[OA\Delete(
+        path: "/profile/image",
+        summary: "Remove profile image",
+        description: "Removes the current user's profile image.",
+        tags: ["Authentication"],
+        security: [["bearerAuth" => []]],
+        responses: [
+            new OA\Response(response: 200, description: "Profile image removed successfully"),
+            new OA\Response(response: 401, description: "Unauthorized"),
+            new OA\Response(response: 500, description: "Server error")
+        ]
+    )]
+    public function removeProfileImage(Request $request, Response $response): Response
+    {
+        try {
+            // Get current user from session
+            $currentUser = Session::get('user');
+            if (!$currentUser || !isset($currentUser['id'])) {
+                $response->setStatusCode(401);
+                $response->setHeader('Content-Type', 'application/json');
+                $response->setContent((string)json_encode([
+                    'success' => false,
+                    'message' => 'Unauthorized',
+                    'data' => null
+                ]));
+                return $response;
+            }
+
+            $userId = (int)$currentUser['id'];
+
+            // Initialize profile service
+            $profileService = new \App\Services\ProfileService();
+
+            // Remove profile image
+            $updatedUser = $profileService->removeProfileImage($userId);
+
+            $this->loggingService->logAuth('profile-image-remove', 'success', "Profile image removed for user: {$userId}", (string)$userId);
+
+            $response->setHeader('Content-Type', 'application/json');
+            $response->setContent((string)json_encode([
+                'success' => true,
+                'message' => 'Profile image removed successfully',
+                'data' => $updatedUser
+            ]));
+            $response->setStatusCode(200);
+            return $response;
+
+        } catch (\Exception $e) {
+            $this->loggingService->logAuth('profile-image-remove', 'failure', "Profile image removal error: " . $e->getMessage(), (string)($currentUser['id'] ?? ''));
+            $response->setStatusCode(500);
+            $response->setHeader('Content-Type', 'application/json');
+            $response->setContent((string)json_encode([
+                'success' => false,
+                'message' => 'An error occurred while removing profile image',
+                'data' => null
+            ]));
+            return $response;
+        }
+    }
 }

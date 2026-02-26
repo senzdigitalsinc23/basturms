@@ -36,6 +36,16 @@ class Router
         $this->addRoute('POST', "/api/{$version}{$uri}", $action, $middleware);
     }
 
+    public function putApi(string $version, string $uri, array $action, array $middleware = []): void
+    {
+        $this->addRoute('PUT', "/api/{$version}{$uri}", $action, $middleware);
+    }
+
+    public function deleteApi(string $version, string $uri, array $action, array $middleware = []): void
+    {
+        $this->addRoute('DELETE', "/api/{$version}{$uri}", $action, $middleware);
+    }
+
     public function middleware(array $middleware): void
     {
         $this->globalMiddleware = array_merge($this->globalMiddleware, $middleware);

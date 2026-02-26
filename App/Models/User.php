@@ -15,6 +15,7 @@ class User extends Model
     public string $username;
     public string $email;
     public string $password;
+    public ?int $profile_image_id;
     public ?string $created_at;
     public ?string $updated_at;
     public string $status;

@@ -12,6 +12,7 @@ class UploadService
 
     private const ALLOWED_DOC_TYPES = [
         'profile_picture',
+        'signature',
         'staff_signature',
         'student_document',
         'staff_document'
@@ -114,14 +115,18 @@ class UploadService
         }
 
         // 5. Log in DB
-        // Use relative URL for public access/retrieval
-        $url = "uploads/$subDir/$uniqueName";
+        // Generate full web URL for frontend access via the file serving endpoint
+        $appUrl = $_ENV['APP_URL'] ?? 'http://localhost:8000';
+        $appUrl = rtrim($appUrl, '/'); // Remove trailing slash if present
+        
+        // Store relative path in database for file system access
+        $relativeUrl = "uploads/$subDir/$uniqueName";
 
         $logData = [
             'doc_id' => $docId,
             'doc_name' => basename($fileData['name']),
             'doc_type' => $docType,
-            'url' => $url,
+            'url' => $relativeUrl, // Store relative path for file system
             'file_type' => $mimeType,
             'file_size' => $fileData['size']
         ];
@@ -134,10 +139,22 @@ class UploadService
             throw new Exception("Failed to log upload in database.");
         }
 
+        // Return full URL pointing to the file serving endpoint
+        // Use public endpoint for profile pictures (no auth required)
+        // Use secure session-based endpoint for signatures (works in browser with cookies)
+        // Use authenticated API endpoint for documents (requires Bearer token)
+        if ($docType === 'profile_picture') {
+            $fullUrl = $appUrl . '/api/v1/uploads/public/' . $uploadId;
+        } elseif (in_array($docType, ['signature', 'staff_signature'])) {
+            $fullUrl = $appUrl . '/api/v1/uploads/secure/' . $uploadId;
+        } else {
+            $fullUrl = $appUrl . '/api/v1/uploads/file/' . $uploadId;
+        }
+
         return [
             'success' => true,
             'upload_id' => $uploadId,
-            'url' => $url,
+            'url' => $fullUrl,
             'doc_name' => $logData['doc_name']
         ];
     }
@@ -171,5 +188,105 @@ class UploadService
         if (!$upload) return null;
 
         return dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $upload['url']);
+    }
+
+    /**
+     * Update user's profile picture reference
+     *
+     * @param int $userId User's primary key ID
+     * @param string $docId The doc_id from uploads table
+     * @return bool Success status
+     */
+    public function updateUserProfilePicture(int $userId, string $docId): bool
+    {
+        try {
+            $db = \App\Core\Database::getInstance()->getConnection();
+            
+            $stmt = $db->prepare("
+                UPDATE users 
+                SET profile_picture_id = ? 
+                WHERE id = ?
+            ");
+            
+            return $stmt->execute([$docId, $userId]);
+        } catch (\Exception $e) {
+            error_log("Failed to update user profile picture: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Delete old profile picture for a user
+     * Removes both the file from disk and the database record
+     *
+     * @param int $userId User's primary key ID
+     * @return bool Success status
+     */
+    public function deleteOldProfilePicture(int $userId): bool
+    {
+        try {
+            $db = \App\Core\Database::getInstance()->getConnection();
+            
+            // Get the current profile picture doc_id
+            $stmt = $db->prepare("SELECT profile_picture_id FROM users WHERE id = ?");
+            $stmt->execute([$userId]);
+            $user = $stmt->fetch(\PDO::FETCH_ASSOC);
+            
+            if (!$user || empty($user['profile_picture_id'])) {
+                // No existing profile picture to delete
+                return true;
+            }
+            
+            $oldDocId = $user['profile_picture_id'];
+            
+            // Get the upload record
+            $stmt = $db->prepare("SELECT id, url FROM uploads WHERE doc_id = ?");
+            $stmt->execute([$oldDocId]);
+            $upload = $stmt->fetch(\PDO::FETCH_ASSOC);
+            
+            if ($upload) {
+                // Delete the physical file
+                $filePath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $upload['url']);
+                if (file_exists($filePath)) {
+                    unlink($filePath);
+                }
+                
+                // Delete the database record
+                $stmt = $db->prepare("DELETE FROM uploads WHERE id = ?");
+                $stmt->execute([$upload['id']]);
+            }
+            
+            return true;
+            
+        } catch (\Exception $e) {
+            error_log("Failed to delete old profile picture: " . $e->getMessage());
+            // Don't fail the upload if deletion fails
+            return false;
+        }
+    }
+
+    /**
+     * Update staff's signature reference
+     *
+     * @param string $userId User's user_id (staff_id)
+     * @param string $docId The doc_id from uploads table
+     * @return bool Success status
+     */
+    public function updateStaffSignature(string $userId, string $docId): bool
+    {
+        try {
+            $db = \App\Core\Database::getInstance()->getConnection();
+            
+            $stmt = $db->prepare("
+                UPDATE staff 
+                SET signature_id = ? 
+                WHERE staff_id = ?
+            ");
+            
+            return $stmt->execute([$docId, $userId]);
+        } catch (\Exception $e) {
+            error_log("Failed to update staff signature: " . $e->getMessage());
+            return false;
+        }
     }
 }

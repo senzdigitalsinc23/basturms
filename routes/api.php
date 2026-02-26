@@ -45,6 +45,10 @@ $router->postApi('v1', '/login', [AuthController::class, 'login'], [APIKeyMiddle
 $router->getApi('v1', '/me', [AuthController::class, 'me'], [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class]);
 $router->getApi('v1', '/logout', [AuthController::class, 'logout'], [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class]);
 $router->getApi('v1', '/profile', [AuthController::class, 'profile'], [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class]);
+$router->getApi('v1', '/profile/details', [AuthController::class, 'getProfileDetails'], [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class]);
+$router->putApi('v1', '/profile/update', [AuthController::class, 'updateProfile'], [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class]);
+$router->putApi('v1', '/profile/image', [AuthController::class, 'updateProfileImage'], [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class]);
+$router->deleteApi('v1', '/profile/image', [AuthController::class, 'removeProfileImage'], [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class]);
 $router->postApi('v1', '/auth/reset-password', [AuthController::class, 'resetPassword'], [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class, BruteForceLockoutMiddleware::class]);
 $router->postApi('v1', '/auth/forgot-password', [AuthController::class, 'forgotPassword'], [APIKeyMiddleware::class, RateLimiter::class]);
 
@@ -137,6 +141,10 @@ $router->getApi('v1', '/academic/activities/list/inactive', [AcademicController:
 // v1 Uploads
 $router->postApi('v1', '/uploads', [UploadController::class, 'upload'], [APIKeyMiddleware::class, AuthMiddleware::class]);
 $router->getApi('v1', '/uploads/file/{id}', [UploadController::class, 'getFile'], [APIKeyMiddleware::class, AuthMiddleware::class]);
+// Public endpoint for serving files (no auth required for images in browser)
+$router->getApi('v1', '/uploads/public/{id}', [UploadController::class, 'getPublicFile'], [RateLimiter::class]);
+// Secure endpoint for session-based auth (works in browser with cookies)
+$router->get('/api/v1/uploads/secure/{id}', [UploadController::class, 'getSecureFile']);
 
 
 $router->postApi('v1', '/academic/classes/activities/assign', [AcademicController::class, 'assignActivityToClass'], [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class]);
