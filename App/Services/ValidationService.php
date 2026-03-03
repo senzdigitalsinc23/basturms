@@ -50,26 +50,73 @@ class ValidationService
         $errors = [];
         $validated = [];
 
-
         foreach ($rules as $field => $fieldRules) {
             $value = $data[$field] ?? null;
-            foreach (explode('|', $fieldRules) as $rule) {
-                if ($rule === 'required' && (is_null($value) || $value === '')) {
-                    $errors[$field][] = 'This field is required.';
+            $rulesArray = explode('|', $fieldRules);
+            
+            foreach ($rulesArray as $rule) {
+                // Parse rule with parameters (e.g., min:2, max:100)
+                $ruleParts = explode(':', $rule);
+                $ruleName = $ruleParts[0];
+                $ruleParam = $ruleParts[1] ?? null;
+                
+                // Required validation
+                if ($ruleName === 'required' && ($value === null || $value === '')) {
+                    $errors[$field][] = ucfirst(str_replace('_', ' ', $field)) . ' is required';
+                    break; // Skip other validations if required fails
                 }
-                if ($rule === 'email' && $value && !filter_var($value, FILTER_VALIDATE_EMAIL)) {
-                    $errors[$field][] = 'Invalid email format.';
+                
+                // Skip other validations if value is null/empty and field is not required
+                if (($value === null || $value === '') && !in_array('required', $rulesArray)) {
+                    continue;
                 }
-                // Add more rules as needed (min, max, string, int, etc.)
+                
+                // Nullable validation - skip if value is empty
+                if ($ruleName === 'nullable' && ($value === null || $value === '')) {
+                    break; // Skip all other validations
+                }
+                
+                // Email validation
+                if ($ruleName === 'email' && $value && !filter_var($value, FILTER_VALIDATE_EMAIL)) {
+                    $errors[$field][] = 'Valid email is required';
+                }
+                
+                // String validation
+                if ($ruleName === 'string' && $value && !is_string($value)) {
+                    $errors[$field][] = ucfirst(str_replace('_', ' ', $field)) . ' must be a string';
+                }
+                
+                // Min length validation
+                if ($ruleName === 'min' && $ruleParam && $value) {
+                    if (is_string($value) && strlen($value) < (int)$ruleParam) {
+                        $errors[$field][] = ucfirst(str_replace('_', ' ', $field)) . ' must be at least ' . $ruleParam . ' characters';
+                    }
+                }
+                
+                // Max length validation
+                if ($ruleName === 'max' && $ruleParam && $value) {
+                    if (is_string($value) && strlen($value) > (int)$ruleParam) {
+                        $errors[$field][] = ucfirst(str_replace('_', ' ', $field)) . ' must not exceed ' . $ruleParam . ' characters';
+                    }
+                }
+                
+                // Date validation
+                if ($ruleName === 'date' && $value) {
+                    $timestamp = strtotime($value);
+                    if ($timestamp === false) {
+                        $errors[$field][] = ucfirst(str_replace('_', ' ', $field)) . ' must be a valid date';
+                    }
+                }
             }
+            
             $validated[$field] = $value;
         }
 
-        return [
-            'success' => empty($errors),
-            'errors' => $errors,
-            'data' => $validated,
-        ];
+        if (!empty($errors)) {
+            throw new \App\Exceptions\ValidationException($errors, 'Validation failed');
+        }
+
+        return $validated;
     }
 
     /**

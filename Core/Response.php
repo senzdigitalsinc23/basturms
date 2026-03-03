@@ -67,7 +67,7 @@ class Response
 
         //echo json_encode(['success' => true, 'message' => 'Students retrieved successfully', 'data' => $this->headers]);
 
-        echo $this->content;
+        echo $this->content;exit;
     }
 
     public static function download(string $filePath, ?string $fileName = null, string $contentType = 'application/octet-stream'): void

@@ -1,0 +1,50 @@
+{
+    "personal_contact": {
+        "first_name": "Benjamin",
+        "last_name": "Amoako",
+        "other_name": "",
+        "email": "ben.amoako@basturms.com",
+        "phone": "0541804064",
+        "id_type": "1",
+        "id_no": "GHA-123367456377-3",
+        "snnit_no": "",
+        "date_of_joining": "2026-02-02",
+        "status": "active"
+    },
+    "address": {
+        "country": "Ghana",
+        "city": "Tarkwa",
+        "hometown": "Dompim Pepesa",
+        "residence": "Dompim",
+        "house_no": "DP98",
+        "gps_no": "00000000000"
+    },
+    "academic_history": [{
+        "school_name": "University of Ghana",
+        "program_offered": "Business Administration",
+        "qualification": "Bsc",
+        "year_completed": "2020"
+    }, {
+        "school_name": "Tarkwa Senior High school",
+        "program_offered": "General Science",
+        "qualification": "WASSCE",
+        "year_completed": "2012"
+    }],
+    "appointment_history": {
+        "appointment_date": "2026-02-02",
+        "appointment_status": "appointed",
+        "class_teacher_for": "19",
+        "assigned_classes": [{
+            "class_id": "18"
+        }, {
+            "class_id": "19"
+        }, {
+            "class_id": "20"
+        }],
+        "assigned_subjects": [{
+            "subject_id": "26",
+            "class_id": "18"
+        }],
+        "roles": [19]
+    }
+}

@@ -5,6 +5,7 @@ use App\Controllers\Api\HealthController;
 use App\Controllers\Api\v1\AdminController;
 use App\Controllers\Api\v1\AuthController;
 use App\Controllers\Api\v1\StudentController;
+use App\Controllers\Api\v1\StaffController;
 use App\Controllers\Api\v1\PromotionController;
 use App\Controllers\Api\v1\AcademicController;
 use App\Controllers\Api\v1\RankingController;
@@ -69,6 +70,21 @@ $router->getApi('v1', '/students/download-template', [StudentController::class, 
 $router->postApi('v1', '/students/state', [StudentController::class, 'freeze'], [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class]);
 $router->postApi('v1', '/students/delete', [StudentController::class, 'delete'], [APIKeyMiddleware::class, RateLimiter::class]);
 $router->postApi('v1', '/students/class', [StudentController::class, 'classStudents'], [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class]);
+
+// v1 Staff
+$router->postApi('v1', '/staff/register', [StaffController::class, 'register'], [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class]);
+$router->getApi('v1', '/staff', [StaffController::class, 'getAllStaff'], [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class]);
+$router->getApi('v1', '/staff/filter', [StaffController::class, 'getStaffByFilter'], [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class]);
+$router->postApi('v1', '/staff/details', [StaffController::class, 'getStaff'], [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class]);
+$router->putApi('v1', '/staff/{id}', [StaffController::class, 'updateStaff'], [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class]);
+$router->postApi('v1', '/staff/share-credentials', [StaffController::class, 'shareCredentials'], [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class]);
+
+// Staff Assignments
+$router->postApi('v1', '/staff/assign-classes', [StaffController::class, 'assignClasses'], [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class]);
+$router->postApi('v1', '/staff/assign-subjects', [StaffController::class, 'assignSubjects'], [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class]);
+$router->getApi('v1', '/staff/assignments', [StaffController::class, 'getStaffAssignments'], [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class]);
+$router->deleteApi('v1', '/staff/remove-class', [StaffController::class, 'removeClassAssignment'], [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class]);
+$router->deleteApi('v1', '/staff/remove-subject', [StaffController::class, 'removeSubjectAssignment'], [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class]);
 
 
 // v1 Promotions
