@@ -76,7 +76,9 @@ $router->postApi('v1', '/staff/register', [StaffController::class, 'register'], 
 $router->getApi('v1', '/staff', [StaffController::class, 'getAllStaff'], [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class]);
 $router->getApi('v1', '/staff/filter', [StaffController::class, 'getStaffByFilter'], [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class]);
 $router->postApi('v1', '/staff/details', [StaffController::class, 'getStaff'], [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class]);
-$router->putApi('v1', '/staff/{id}', [StaffController::class, 'updateStaff'], [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class]);
+$router->putApi('v1', '/staff/update', [StaffController::class, 'updateStaff'], [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class]);
+$router->deleteApi('v1', '/staff/delete', [StaffController::class, 'deleteStaff'], [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class]);
+$router->deleteApi('v1', '/staff/delete/permanent', [StaffController::class, 'permanentlyDeleteStaff'], [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class]);
 $router->postApi('v1', '/staff/share-credentials', [StaffController::class, 'shareCredentials'], [APIKeyMiddleware::class, AuthMiddleware::class, RateLimiter::class]);
 
 // Staff Assignments

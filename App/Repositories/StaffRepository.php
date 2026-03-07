@@ -292,14 +292,20 @@ class StaffRepository
     /**
      * Get staff by ID
      */
-    public function getStaffById(string $staffId): ?array
+    public function getStaffById(string $staffId, $is_archived = ''): ?array
     {
         $sql = "SELECT DISTINCT s.*, 
                        sa.country, sa.city, sa.hometown, sa.residence, 
-                       sa.house_no, sa.gps_no
+                       sa.house_no, sa.gps_no,
+                       u.profile_picture_id
                 FROM staff s
                 LEFT JOIN staff_address sa ON s.staff_id = sa.staff_id
-                WHERE s.staff_id = ? AND s.is_archived = 0";
+                LEFT JOIN users u ON s.staff_id = u.user_id
+                WHERE s.staff_id = ?";
+
+                if ($is_archived ===  '') {
+                    $sql .= " AND s.is_archived = 0";
+                }
         
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([$staffId]);
@@ -315,15 +321,25 @@ class StaffRepository
     {
         $sql = "SELECT DISTINCT s.*, 
                        sa.country, sa.city, sa.hometown, sa.residence, 
-                       sa.house_no, sa.gps_no
+                       sa.house_no, sa.gps_no,
+                       u.profile_picture_id
                 FROM staff s
                 LEFT JOIN staff_address sa ON s.staff_id = sa.staff_id
-                WHERE s.status = ? AND s.is_archived = 0 
-                ORDER BY s.added_on DESC 
-                LIMIT ? OFFSET ?";
+                LEFT JOIN users u ON s.staff_id = u.user_id ";
+        
+        $params = [];
+        
+        if ($status !== 'all') {
+            $sql .= " WHERE s.is_archived = 0 AND s.status = ?";
+            $params[] = $status;
+        }
+        
+        $sql .= " ORDER BY s.added_on DESC LIMIT ? OFFSET ?";
+        $params[] = $limit;
+        $params[] = $offset;
         
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([$status, $limit, $offset]);
+        $stmt->execute($params);
         
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -333,9 +349,16 @@ class StaffRepository
      */
     public function countStaff(string $status = 'active'): int
     {
-        $sql = "SELECT COUNT(*) FROM staff WHERE status = ? AND is_archived = 0";
+        $sql = "SELECT COUNT(*) FROM staff WHERE is_archived = 0";
+        $params = [];
+        
+        if ($status !== 'all') {
+            $sql .= " AND status = ?";
+            $params[] = $status;
+        }
+        
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([$status]);
+        $stmt->execute($params);
         
         return (int)$stmt->fetchColumn();
     }
@@ -506,20 +529,78 @@ class StaffRepository
     }
 
     /**
-     * Archive staff (soft delete)
+     * Archive staff (soft delete with complete data backup)
      */
     public function archiveStaff(string $staffId, ?string $reason, string $archivedBy): bool
     {
-        $sql = "UPDATE staff SET 
-                is_archived = 1, 
-                archived_at = NOW(), 
-                archived_by = ?, 
-                archive_reason = ?,
-                status = 'inactive'
-                WHERE staff_id = ?";
+        try {
+            $this->pdo->beginTransaction();
+            
+            // Get complete staff data before archiving
+            $staffData = $this->getCompleteStaffData($staffId);
+            
+            if (!$staffData) {
+                throw new \Exception("Staff not found");
+            }
+            
+            // Insert into staff_archive table
+            $archiveSql = "INSERT INTO staff_archive (staff_id, archive_reason, archived_by, staff_data) 
+                          VALUES (?, ?, ?, ?)";
+            $archiveStmt = $this->pdo->prepare($archiveSql);
+            $archiveStmt->execute([
+                $staffId, 
+                $reason, 
+                $archivedBy, 
+                json_encode($staffData)
+            ]);
+            
+            // Update staff table
+            $updateSql = "UPDATE staff SET 
+                    is_archived = 1, 
+                    archived_at = NOW(), 
+                    archived_by = ?, 
+                    archive_reason = ?,
+                    status = 'deleted'
+                    WHERE staff_id = ?";
+            
+            $updateStmt = $this->pdo->prepare($updateSql);
+            $updateStmt->execute([$archivedBy, $reason, $staffId]);
+            
+            $this->pdo->commit();
+            return true;
+        } catch (\Exception $e) {
+            $this->pdo->rollBack();
+            throw $e;
+        }
+    }
+
+    /**
+     * Get complete staff data for archiving
+     */
+    private function getCompleteStaffData(string $staffId): ?array
+    {
+        // Get staff basic info with address
+        $staff = $this->getStaffById($staffId);
+        if (!$staff) {
+            return null;
+        }
         
-        $stmt = $this->pdo->prepare($sql);
-        return $stmt->execute([$archivedBy, $reason, $staffId]);
+        // Get academic history
+        $staff['academic_history'] = $this->getStaffAcademicHistory($staffId);
+        
+        // Get appointment
+        $staff['appointment'] = $this->getStaffAppointment($staffId);
+        
+        // Get classes
+        $staff['classes'] = $this->getStaffClasses($staffId);
+        
+        // Get subjects
+        $staff['subjects'] = $this->getStaffSubjects($staffId);
+        
+        // Get roles
+        $staff['roles'] = $this->getStaffRoles($staffId);
+        
+        return $staff;
     }
 
     /**
@@ -631,12 +712,21 @@ class StaffRepository
                 FROM staff s
                 LEFT JOIN staff_address sa ON s.staff_id = sa.staff_id
                 INNER JOIN staff_roles sr ON s.staff_id = sr.staff_id
-                WHERE sr.role_id = ? AND s.status = ? AND s.is_archived = 0 
-                ORDER BY s.added_on DESC 
-                LIMIT ? OFFSET ?";
+                WHERE sr.role_id = ? AND s.is_archived = 0";
+        
+        $params = [$roleId];
+        
+        if ($status !== 'all') {
+            $sql .= " AND s.status = ?";
+            $params[] = $status;
+        }
+        
+        $sql .= " ORDER BY s.added_on DESC LIMIT ? OFFSET ?";
+        $params[] = $limit;
+        $params[] = $offset;
         
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([$roleId, $status, $limit, $offset]);
+        $stmt->execute($params);
         
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -649,10 +739,17 @@ class StaffRepository
         $sql = "SELECT COUNT(DISTINCT s.staff_id) 
                 FROM staff s
                 INNER JOIN staff_roles sr ON s.staff_id = sr.staff_id
-                WHERE sr.role_id = ? AND s.status = ? AND s.is_archived = 0";
+                WHERE sr.role_id = ? AND s.is_archived = 0";
+        
+        $params = [$roleId];
+        
+        if ($status !== 'all') {
+            $sql .= " AND s.status = ?";
+            $params[] = $status;
+        }
         
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([$roleId, $status]);
+        $stmt->execute($params);
         
         return (int)$stmt->fetchColumn();
     }
@@ -668,12 +765,21 @@ class StaffRepository
                 FROM staff s
                 LEFT JOIN staff_address sa ON s.staff_id = sa.staff_id
                 INNER JOIN staff_class sc ON s.staff_id = sc.staff_id
-                WHERE sc.classes_assigned = ? AND s.status = ? AND s.is_archived = 0 
-                ORDER BY s.added_on DESC 
-                LIMIT ? OFFSET ?";
+                WHERE sc.classes_assigned = ? AND s.is_archived = 0";
+        
+        $params = [$classId];
+        
+        if ($status !== 'all') {
+            $sql .= " AND s.status = ?";
+            $params[] = $status;
+        }
+        
+        $sql .= " ORDER BY s.added_on DESC LIMIT ? OFFSET ?";
+        $params[] = $limit;
+        $params[] = $offset;
         
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([$classId, $status, $limit, $offset]);
+        $stmt->execute($params);
         
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -686,10 +792,17 @@ class StaffRepository
         $sql = "SELECT COUNT(DISTINCT s.staff_id) 
                 FROM staff s
                 INNER JOIN staff_class sc ON s.staff_id = sc.staff_id
-                WHERE sc.classes_assigned = ? AND s.status = ? AND s.is_archived = 0";
+                WHERE sc.classes_assigned = ? AND s.is_archived = 0";
+        
+        $params = [$classId];
+        
+        if ($status !== 'all') {
+            $sql .= " AND s.status = ?";
+            $params[] = $status;
+        }
         
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([$classId, $status]);
+        $stmt->execute($params);
         
         return (int)$stmt->fetchColumn();
     }
@@ -705,12 +818,21 @@ class StaffRepository
                 FROM staff s
                 LEFT JOIN staff_address sa ON s.staff_id = sa.staff_id
                 INNER JOIN staff_subjects ss ON s.staff_id = ss.staff_id
-                WHERE ss.subject_id = ? AND s.status = ? AND s.is_archived = 0 
-                ORDER BY s.added_on DESC 
-                LIMIT ? OFFSET ?";
+                WHERE ss.subject_id = ? AND s.is_archived = 0";
+        
+        $params = [$subjectId];
+        
+        if ($status !== 'all') {
+            $sql .= " AND s.status = ?";
+            $params[] = $status;
+        }
+        
+        $sql .= " ORDER BY s.added_on DESC LIMIT ? OFFSET ?";
+        $params[] = $limit;
+        $params[] = $offset;
         
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([$subjectId, $status, $limit, $offset]);
+        $stmt->execute($params);
         
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -723,10 +845,17 @@ class StaffRepository
         $sql = "SELECT COUNT(DISTINCT s.staff_id) 
                 FROM staff s
                 INNER JOIN staff_subjects ss ON s.staff_id = ss.staff_id
-                WHERE ss.subject_id = ? AND s.status = ? AND s.is_archived = 0";
+                WHERE ss.subject_id = ? AND s.is_archived = 0";
+        
+        $params = [$subjectId];
+        
+        if ($status !== 'all') {
+            $sql .= " AND s.status = ?";
+            $params[] = $status;
+        }
         
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([$subjectId, $status]);
+        $stmt->execute($params);
         
         return (int)$stmt->fetchColumn();
     }
@@ -745,12 +874,21 @@ class StaffRepository
                 LEFT JOIN staff_address sa ON s.staff_id = sa.staff_id
                 WHERE (s.first_name LIKE ? OR s.last_name LIKE ? OR s.other_name LIKE ? 
                        OR s.email LIKE ? OR s.staff_id LIKE ?)
-                AND s.status = ? AND s.is_archived = 0 
-                ORDER BY s.added_on DESC 
-                LIMIT ? OFFSET ?";
+                AND s.is_archived = 0";
+        
+        $params = [$searchPattern, $searchPattern, $searchPattern, $searchPattern, $searchPattern];
+        
+        if ($status !== 'all') {
+            $sql .= " AND s.status = ?";
+            $params[] = $status;
+        }
+        
+        $sql .= " ORDER BY s.added_on DESC LIMIT ? OFFSET ?";
+        $params[] = $limit;
+        $params[] = $offset;
         
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([$searchPattern, $searchPattern, $searchPattern, $searchPattern, $searchPattern, $status, $limit, $offset]);
+        $stmt->execute($params);
         
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -766,10 +904,17 @@ class StaffRepository
                 FROM staff s
                 WHERE (s.first_name LIKE ? OR s.last_name LIKE ? OR s.other_name LIKE ? 
                        OR s.email LIKE ? OR s.staff_id LIKE ?)
-                AND s.status = ? AND s.is_archived = 0";
+                AND s.is_archived = 0";
+        
+        $params = [$searchPattern, $searchPattern, $searchPattern, $searchPattern, $searchPattern];
+        
+        if ($status !== 'all') {
+            $sql .= " AND s.status = ?";
+            $params[] = $status;
+        }
         
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([$searchPattern, $searchPattern, $searchPattern, $searchPattern, $searchPattern, $status]);
+        $stmt->execute($params);
         
         return (int)$stmt->fetchColumn();
     }

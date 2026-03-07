@@ -413,6 +413,7 @@ class StaffService
                 'first_name' => $staff['first_name'] ?? null,
                 'last_name' => $staff['last_name'] ?? null,
                 'other_name' => $staff['other_name'] ?? null,
+                'profile_picture_id' => $staff['profile_picture_id'] ?? null,
                 'roles' => $assignedRoles,
                 'classes_assigned' => $assignedClasses,
                 'subjects_assigned' => $assignedSubjects,
@@ -431,6 +432,7 @@ class StaffService
                 'first_name' => $staff['first_name'] ?? null,
                 'last_name' => $staff['last_name'] ?? null,
                 'other_name' => $staff['other_name'] ?? null,
+                'profile_picture_id' => $staff['profile_picture_id'] ?? null,
                 'roles' => [],
                 'classes_assigned' => [],
                 'subjects_assigned' => [],
@@ -513,6 +515,7 @@ class StaffService
                 'date_of_joining' => $staff['date_of_joining'] ?? null,
                 'status' => $staff['status'] ?? null,
                 'signature_id' => $staff['signature_id'] ?? null,
+                'profile_picture_id' => $staff['profile_picture_id'] ?? null,
             ];
 
             // Group address info
@@ -568,6 +571,7 @@ class StaffService
                     'date_of_joining' => $staff['date_of_joining'] ?? null,
                     'status' => $staff['status'] ?? null,
                     'signature_id' => $staff['signature_id'] ?? null,
+                    'profile_picture_id' => $staff['profile_picture_id'] ?? null,
                 ],
                 'address' => [
                     'country' => $staff['country'] ?? null,
@@ -871,6 +875,8 @@ class StaffService
         try {
             $db->beginTransaction();
 
+            //echo json_encode($staffId);exit;
+
             // Check if staff exists
             $staff = $this->staffRepository->getStaffById($staffId);
             if (!$staff) {
@@ -920,12 +926,14 @@ class StaffService
     public function permanentlyDeleteStaff(string $staffId, string $deletedBy = 'system'): array
     {
         $db = $this->database->getConnection();
+
+        $is_archived = 'any';
         
         try {
             $db->beginTransaction();
 
             // Check if staff exists
-            $staff = $this->staffRepository->getStaffById($staffId);
+            $staff = $this->staffRepository->getStaffById($staffId, $is_archived);
             if (!$staff) {
                 throw new \Exception('Staff not found');
             }

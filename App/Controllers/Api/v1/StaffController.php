@@ -10,6 +10,7 @@ use App\Services\LoggingService;
 use App\Services\AuthService;
 use App\Services\NotificationService;
 use App\Exceptions\ValidationException;
+use JsonException;
 use OpenApi\Attributes as OA;
 
 #[OA\Tag(
@@ -456,8 +457,8 @@ file_put_contents($file_path, $content);exit; */
                 name: "status",
                 in: "query",
                 required: false,
-                description: "Staff status filter",
-                schema: new OA\Schema(type: "string", default: "active"),
+                description: "Staff status filter (active, inactive, suspended, terminated, or 'all' for all statuses)",
+                schema: new OA\Schema(type: "string", default: "active", enum: ["active", "inactive", "suspended", "terminated", "all"]),
                 example: "active"
             )
         ],
@@ -520,6 +521,8 @@ file_put_contents($file_path, $content);exit; */
             $page = (int)($request->getQuery('page') ?? 1);
             $limit = (int)($request->getQuery('limit') ?? 10);
             $status = $request->getQuery('status') ?? 'active';
+
+            //echo json_encode($status);exit;
 
             $result = $this->staffService->getAllStaff($page, $limit, $status);
 
@@ -743,7 +746,7 @@ file_put_contents($file_path, $content);exit; */
     }
 
     #[OA\Put(
-        path: "/api/v1/staff/{id}",
+        path: "/api/v1/staff/update",
         summary: "Update staff member details",
         description: "Update complete staff information including personal details, address, academic history, and appointment information",
         tags: ["Staff Management"],
@@ -897,7 +900,9 @@ file_put_contents($file_path, $content);exit; */
     public function updateStaff(Request $request, Response $response, array $params = []): Response
     {
         try {
-            $staffId = $params['id'] ?? null;
+            $staffId = $request->getPost('personal_contact')['staff_id'] ?? null;
+
+            //echo json_encode($request->getPost('personal_contact')['staff_id']);exit;
 
             if (!$staffId) {
                 $response->json([
@@ -985,7 +990,7 @@ file_put_contents($file_path, $content);exit; */
     }
 
     #[OA\Patch(
-        path: "/api/v1/staff/{id}/status",
+        path: "/api/v1/staff/status",
         summary: "Update staff status (activate/deactivate)",
         description: "Change staff status to active, inactive, suspended, or terminated",
         tags: ["Staff Management"],
@@ -1185,7 +1190,9 @@ file_put_contents($file_path, $content);exit; */
     public function deleteStaff(Request $request, Response $response, array $params = []): Response
     {
         try {
-            $staffId = $params['id'] ?? null;
+            $staffId = $request->getPost('staff_id') ?? null;
+
+            //echo json_encode($staffId);exit;
 
             if (!$staffId) {
                 $response->json([
@@ -1279,7 +1286,9 @@ file_put_contents($file_path, $content);exit; */
     public function permanentlyDeleteStaff(Request $request, Response $response, array $params = []): Response
     {
         try {
-            $staffId = $params['id'] ?? null;
+            $staffId = $request->getPost('staff_id') ?? null;
+
+            //echo json_encode($staffId);exit;
 
             if (!$staffId) {
                 $response->json([
