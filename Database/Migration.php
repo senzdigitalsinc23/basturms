@@ -10,10 +10,10 @@ abstract class Migration
     protected PDO $db;
     protected $schema;
 
-    public function __construct(PDO $db)
+    public function __construct(?PDO $db = null)
     {
-        $this->db = $db;
-        $this->schema = new SchemaBuilder($db);
+        $this->db = $db ?? Database::getInstance()->getConnection();
+        $this->schema = new SchemaBuilder($this->db);
     }
 
     abstract public function up(): void;

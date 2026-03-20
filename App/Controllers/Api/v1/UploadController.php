@@ -285,4 +285,78 @@ class UploadController
             return $response;
         }
     }
+
+    #[OA\Get(
+        path: "/uploads/secure/token/{token}",
+        summary: "Access a file using secure access token",
+        description: "Retrieves and serves an uploaded file using a cryptographically secure access token. Works in browser with session authentication.",
+        tags: ["Uploads"],
+        security: [["cookieAuth" => []]],
+        parameters: [
+            new OA\Parameter(
+                name: "token",
+                in: "path",
+                required: true,
+                description: "64-character secure access token",
+                schema: new OA\Schema(type: "string"),
+                example: "a1b2c3d4e5f6..."
+            )
+        ],
+        responses: [
+            new OA\Response(response: 200, description: "File content"),
+            new OA\Response(response: 401, description: "Unauthorized"),
+            new OA\Response(response: 404, description: "File not found")
+        ]
+    )]
+    public function getSecureFileByToken(Request $request, Response $response, array $params): Response
+    {
+        try {
+            // Check if user is authenticated via session
+            $user = \App\Core\Session::get('user');
+            if (!$user) {
+                $response->setStatusCode(401);
+                $response->setContent(json_encode([
+                    'success' => false,
+                    'message' => 'Unauthorized. Please login first.'
+                ]));
+                return $response;
+            }
+
+            $token = $params['token'] ?? '';
+            
+            if (empty($token) || strlen($token) !== 64) {
+                throw new Exception("Invalid access token format.");
+            }
+
+            $upload = $this->uploadService->getUploadByToken($token);
+
+            if (!$upload) {
+                throw new Exception("File record not found.");
+            }
+
+            $path = $this->uploadService->getPhysicalPathByToken($token);
+
+            if (!$path || !file_exists($path)) {
+                throw new Exception("File not found on disk.");
+            }
+
+            // Set appropriate headers for file delivery
+            $response->setHeader('Content-Type', $upload['file_type']);
+            $response->setHeader('Content-Length', (string) $upload['file_size']);
+            $response->setHeader('Content-Disposition', 'inline; filename="' . $upload['doc_name'] . '"');
+            $response->setHeader('Cache-Control', 'private, max-age=3600'); // Cache for 1 hour
+            
+            $content = file_get_contents($path);
+            $response->setContent($content);
+            
+            return $response;
+        } catch (Exception $e) {
+            $response->setStatusCode(404);
+            $response->setContent(json_encode([
+                'success' => false,
+                'message' => $e->getMessage()
+            ]));
+            return $response;
+        }
+    }
 }

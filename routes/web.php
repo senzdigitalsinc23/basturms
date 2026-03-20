@@ -33,9 +33,9 @@ $router->get('/web/users', [AdminController::class, 'users'], [AuthMiddleware::c
 $router->get('/web/students', [StudentController::class, 'index'], [/* APIKeyMiddleware::class,  */AuthMiddleware::class]);
 $router->get('/web/students/create', [StudentController::class, 'create'], [/* APIKeyMiddleware::class,  */AuthMiddleware::class]);
 
-//Testing routes
-$router->get('/web/test/mail', [TestController::class, 'mail']);
-$router->get('/web/test/sms', [TestController::class, 'sms']);
-$router->get('/web/test/pdf', [TestController::class, 'pdfReport']);
+//Testing routes — remove in production
+//$router->get('/web/test/mail', [TestController::class, 'mail']);
+//$router->get('/web/test/sms', [TestController::class, 'sms']);
+//$router->get('/web/test/pdf', [TestController::class, 'pdfReport']);
 /* $router->get('/report/queue', [ReportController::class, 'queueReport']);
 $router->get('/report/download', [ReportController::class, 'downloadReport']); */

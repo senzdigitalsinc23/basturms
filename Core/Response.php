@@ -59,13 +59,25 @@ class Response
      */
     public function send(): void
     {
+        // Add CORS headers if not already set
+        if (!isset($this->headers['Access-Control-Allow-Origin'])) {
+            $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+            $allowedOrigins = explode(',', $_ENV['CORS_ALLOWED_ORIGINS'] ?? '');
+            $allowedOrigins = array_map('trim', $allowedOrigins);
+            
+            if (!empty($origin) && (in_array($origin, $allowedOrigins) || in_array('*', $allowedOrigins))) {
+                $this->setHeader('Access-Control-Allow-Origin', $origin);
+                $this->setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+                $this->setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-CSRF-TOKEN,X-API-KEY,X-Api-Key');
+                $this->setHeader('Access-Control-Allow-Credentials', 'true');
+            }
+        }
+        
         http_response_code($this->statusCode);
 
         foreach ($this->headers as $key => $value) {
             header("{$key}: {$value}");
         }
-
-        //echo json_encode(['success' => true, 'message' => 'Students retrieved successfully', 'data' => $this->headers]);
 
         echo $this->content;exit;
     }
@@ -98,8 +110,21 @@ class Response
     {
         $this->setStatusCode($statusCode);
         $this->setHeader('Content-Type', 'application/json');
-        $this->setHeader('Access-Control-Allow-Origin', '*');
-        $this->setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,OPTIONS');
+        
+        // Add CORS headers if not already set
+        if (!isset($this->headers['Access-Control-Allow-Origin'])) {
+            $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+            $allowedOrigins = explode(',', $_ENV['CORS_ALLOWED_ORIGINS'] ?? '');
+            $allowedOrigins = array_map('trim', $allowedOrigins);
+            
+            if (!empty($origin) && (in_array($origin, $allowedOrigins) || in_array('*', $allowedOrigins))) {
+                $this->setHeader('Access-Control-Allow-Origin', $origin);
+                $this->setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+                $this->setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-CSRF-TOKEN,X-API-KEY,X-Api-Key');
+                $this->setHeader('Access-Control-Allow-Credentials', 'true');
+            }
+        }
+        
         $this->setContent(json_encode($data));
         $this->send();
     }

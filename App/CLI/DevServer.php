@@ -6,7 +6,7 @@ class DevServer extends Command
     public function handle(array $args): void
     {
         $host = $args[0] ?? '127.0.0.1';
-        $port = $args[1] ?? '8000';
+        $port = $args[1] ?? '5000';
 
         $docRoot = realpath(__DIR__ . '/../../public');
 

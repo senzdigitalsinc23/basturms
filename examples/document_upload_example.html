@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Upload Example</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            display: none;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .documents-list {
+            margin-top: 30px;
+        }
+        .document-item {
+            padding: 10px;
+            border: 1px solid #ddd;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+        .document-actions {
+            margin-top: 10px;
+        }
+        .document-actions button {
+            margin-right: 10px;
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Document Upload System - Example</h1>
+
+    <!-- Configuration -->
+    <div class="form-group">
+        <label>API Base URL:</label>
+        <input type="text" id="apiUrl" value="http://localhost:8000/api/v1">
+    </div>
+    <div class="form-group">
+        <label>API Key:</label>
+        <input type="text" id="apiKey" placeholder="Enter your API key">
+    </div>
+
+    <hr>
+
+    <!-- Upload Form -->
+    <h2>Upload Document</h2>
+    <form id="uploadForm">
+        <div class="form-group">
+            <label>Entity Type:</label>
+            <select id="entityType" required>
+                <option value="">Select...</option>
+                <option value="staff">Staff</option>
+                <option value="student">Student</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Entity ID (Staff ID or Student Number):</label>
+            <input type="text" id="entityId" placeholder="e.g., LBAST26001" required>
+        </div>
+
+        <div class="form-group">
+            <label>Category:</label>
+            <select id="categoryId" required>
+                <option value="">Select...</option>
+                <!-- Will be populated dynamically -->
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>File:</label>
+            <input type="file" id="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" required>
+        </div>
+
+        <div class="form-group">
+            <label>Description (Optional):</label>
+            <textarea id="description" rows="3" placeholder="Enter document description"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label>Expiry Date (Optional):</label>
+            <input type="date" id="expiryDate">
+        </div>
+
+        <button type="submit">Upload Document</button>
+    </form>
+
+    <div id="uploadResult" class="result"></div>
+
+    <hr>
+
+    <!-- View Documents -->
+    <h2>View Documents</h2>
+    <div class="form-group">
+        <label>Entity Type:</label>
+        <select id="viewEntityType">
+            <option value="staff">Staff</option>
+            <option value="student">Student</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label>Entity ID:</label>
+        <input type="text" id="viewEntityId" placeholder="e.g., LBAST26001">
+    </div>
+    <button onclick="loadDocuments()">Load Documents</button>
+
+    <div id="documentsList" class="documents-list"></div>
+
+    <script>
+        const API_URL = () => document.getElementById('apiUrl').value;
+        const API_KEY = () => document.getElementById('apiKey').value;
+
+        // Load categories when entity type changes
+        document.getElementById('entityType').addEventListener('change', async (e) => {
+            const entityType = e.target.value;
+            if (entityType) {
+                await loadCategories(entityType);
+            } else {
+                document.getElementById('categoryId').innerHTML = '<option value="">Select entity type first...</option>';
+            }
+        });
+
+        // Load categories
+        async function loadCategories(entityType = null) {
+            try {
+                const url = entityType 
+                    ? `${API_URL()}/documents/categories?entity_type=${entityType}`
+                    : `${API_URL()}/documents/categories`;
+
+                const response = await fetch(url, {
+                    headers: {
+                        'X-API-Key': API_KEY()
+                    }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    const select = document.getElementById('categoryId');
+                    select.innerHTML = '<option value="">Select...</option>';
+                    
+                    result.data.forEach(category => {
+                        const option = document.createElement('option');
+                        option.value = category.id;
+                        option.textContent = `${category.category_name}`;
+                        option.title = category.description;
+                        select.appendChild(option);
+                    });
+                } else {
+                    alert('Failed to load categories: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error loading categories:', error);
+                alert('Error loading categories. Make sure database is set up.');
+            }
+        }
+
+        // Upload form submission
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = new FormData();
+            formData.append('file', document.getElementById('file').files[0]);
+            formData.append('entity_type', document.getElementById('entityType').value);
+            formData.append('entity_id', document.getElementById('entityId').value);
+            formData.append('category_id', document.getElementById('categoryId').value);
+            formData.append('description', document.getElementById('description').value);
+            formData.append('expiry_date', document.getElementById('expiryDate').value);
+
+            const resultDiv = document.getElementById('uploadResult');
+            resultDiv.style.display = 'none';
+
+            try {
+                const response = await fetch(`${API_URL()}/documents/upload`, {
+                    method: 'POST',
+                    headers: {
+                        'X-API-Key': API_KEY()
+                    },
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                resultDiv.style.display = 'block';
+                if (result.success) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `
+                        <strong>Success!</strong><br>
+                        Document ID: ${result.data.document_id}<br>
+                        Upload ID: ${result.data.upload_id}<br>
+                        File URL: <a href="${result.data.url}" target="_blank">${result.data.url}</a><br>
+                        File Name: ${result.data.doc_name}
+                    `;
+                    
+                    // Reset form
+                    document.getElementById('uploadForm').reset();
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `<strong>Error:</strong> ${result.message}`;
+                }
+            } catch (error) {
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `<strong>Error:</strong> ${error.message}`;
+            }
+        });
+
+        // Load documents
+        async function loadDocuments() {
+            const entityType = document.getElementById('viewEntityType').value;
+            const entityId = document.getElementById('viewEntityId').value;
+
+            if (!entityId) {
+                alert('Please enter an Entity ID');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL()}/documents/${entityType}/${entityId}`, {
+                    headers: {
+                        'X-API-Key': API_KEY()
+                    }
+                });
+
+                const result = await response.json();
+
+                const listDiv = document.getElementById('documentsList');
+                
+                if (result.success && result.data.length > 0) {
+                    listDiv.innerHTML = '<h3>Documents (' + result.count + ')</h3>';
+                    
+                    result.data.forEach(doc => {
+                        const docDiv = document.createElement('div');
+                        docDiv.className = 'document-item';
+                        docDiv.innerHTML = `
+                            <strong>${doc.document_name}</strong><br>
+                            Category: ${doc.category_name}<br>
+                            Size: ${(doc.file_size / 1024).toFixed(2)} KB<br>
+                            Uploaded: ${doc.upload_date}<br>
+                            Verified: ${doc.is_verified ? 'Yes' : 'No'}<br>
+                            ${doc.expiry_date ? 'Expires: ' + doc.expiry_date + '<br>' : ''}
+                            <div class="document-actions">
+                                <button onclick="window.open('${doc.file_path}', '_blank')">View File</button>
+                                ${!doc.is_verified ? `<button onclick="verifyDocument('${doc.document_id}')">Verify</button>` : ''}
+                                <button onclick="deleteDocument('${doc.document_id}')">Delete</button>
+                            </div>
+                        `;
+                        listDiv.appendChild(docDiv);
+                    });
+                } else {
+                    listDiv.innerHTML = '<p>No documents found.</p>';
+                }
+            } catch (error) {
+                console.error('Error loading documents:', error);
+                alert('Error loading documents: ' + error.message);
+            }
+        }
+
+        // Verify document
+        async function verifyDocument(documentId) {
+            if (!confirm('Verify this document?')) return;
+
+            try {
+                const response = await fetch(`${API_URL()}/documents/${documentId}/verify`, {
+                    method: 'PUT',
+                    headers: {
+                        'X-API-Key': API_KEY()
+                    }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('Document verified successfully!');
+                    loadDocuments();
+                } else {
+                    alert('Error: ' + result.message);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        // Delete document
+        async function deleteDocument(documentId) {
+            if (!confirm('Delete this document?')) return;
+
+            try {
+                const response = await fetch(`${API_URL()}/documents/${documentId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-API-Key': API_KEY()
+                    }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('Document deleted successfully!');
+                    loadDocuments();
+                } else {
+                    alert('Error: ' + result.message);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        // Load categories on page load
+        loadCategories();
+    </script>
+</body>
+</html>

@@ -41,6 +41,11 @@ class Router
         $this->addRoute('PUT', "/api/{$version}{$uri}", $action, $middleware);
     }
 
+    public function patchApi(string $version, string $uri, array $action, array $middleware = []): void
+    {
+        $this->addRoute('PATCH', "/api/{$version}{$uri}", $action, $middleware);
+    }
+
     public function deleteApi(string $version, string $uri, array $action, array $middleware = []): void
     {
         $this->addRoute('DELETE', "/api/{$version}{$uri}", $action, $middleware);
@@ -54,6 +59,11 @@ class Router
     public function put(string $uri, array $action, array $middleware = []): void
     {
         $this->addRoute('PUT', $uri, $action, $middleware);
+    }
+
+    public function patch(string $uri, array $action, array $middleware = []): void
+    {
+        $this->addRoute('PATCH', $uri, $action, $middleware);
     }
 
     public function delete(string $uri, array $action, array $middleware = []): void

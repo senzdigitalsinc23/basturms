@@ -52,16 +52,16 @@ class Migrator
         $batch = $this->getCurrentBatch() + 1;
 
         foreach ($newMigrations as $file) {
-            require_once $this->migrationsPath . DIRECTORY_SEPARATOR . $file;
-
-            $className = $this->getClassNameFromFile($file);
-            if (!class_exists($className)) {
-                echo "Migration class {$className} not found in {$file}\n";
+            $migrationPath = $this->migrationsPath . DIRECTORY_SEPARATOR . $file;
+            
+            // Load the migration file which returns an anonymous class instance
+            $migration = require $migrationPath;
+            
+            // If the require returned a Migration instance directly, use it
+            if (!($migration instanceof Migration)) {
+                echo "Migration file {$file} must return a Migration instance\n";
                 continue;
             }
-
-            /** @var Migration $migration */
-            $migration = new $className($this->db);
 
             echo "Migrating: {$file} ...";
             $migration->up();

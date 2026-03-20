@@ -12,6 +12,8 @@ class Request
     protected array $bodyParams = [];
 
     protected array $files;
+    
+    protected array $attributes = [];
 
     public function __construct()
     {
@@ -44,7 +46,7 @@ class Request
     /**
      * Get GET parameters
      */
-    public function getQuery(string $key = null, $default = null)
+    public function getQuery(?string $key = null, $default = null)
     {
         if ($key === null) return $this->get;
         return $this->get[$key] ?? $default;
@@ -53,7 +55,7 @@ class Request
     /**
      * Get POST parameters
      */
-    public function getPost(string $key = null, $default = null)
+    public function getPost(?string $key = null, $default = null)
     {
         $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
 
@@ -72,7 +74,7 @@ class Request
     /**
      * Get uploaded files
      */
-    public function getFiles(string $key = null)
+    public function getFiles(?string $key = null)
     {
         if ($key === null) return $this->files;
         return $this->files[$key] ?? null;
@@ -135,5 +137,21 @@ class Request
         }
 
         return [];
+    }
+    
+    /**
+     * Set an attribute on the request (for middleware to pass data)
+     */
+    public function setAttribute(string $key, $value): void
+    {
+        $this->attributes[$key] = $value;
+    }
+    
+    /**
+     * Get an attribute from the request
+     */
+    public function getAttribute(string $key, $default = null)
+    {
+        return $this->attributes[$key] ?? $default;
     }
 }

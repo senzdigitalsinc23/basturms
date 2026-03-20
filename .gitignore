@@ -13,3 +13,6 @@
 # Temporary files
 *.bak
 *.tmp
+
+# Production env (contains secrets)
+.env.production
